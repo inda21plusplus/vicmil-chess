@@ -154,6 +154,7 @@ pub mod chess_game {
         pub turn: ChessPieceColor,
         last_move: Option<BoardMove>,
         last_move_passant: bool,
+        move_count_left: u32, // To make sure player does not play more than 50 moves
     }
 
     #[allow(dead_code)]
@@ -164,8 +165,12 @@ pub mod chess_game {
                 board: [INIT; 8 * 8],
                 turn: ChessPieceColor::White,
                 last_move: None,
-                last_move_passant: false
+                last_move_passant: false,
+                move_count_left: 100 // Since it is 50 moves per player
             }
+        }
+        fn reset_move_count_left(&mut self) {
+            self.move_count_left = 100;
         }
         pub fn set_up_board(&mut self) {
             self.empty_board();
@@ -204,7 +209,7 @@ pub mod chess_game {
                 print!("{} ", y);
                 for x in 0..8 {
                     let background_color;
-                    if (x + y) % 2 == 0 {
+                    if (x + y) % 2 == 1 {
                         background_color = ColorTerminal::LightBlue;
                     }
                     else {
@@ -363,13 +368,13 @@ pub mod chess_game {
             return Err("Not a valid diagonal!".to_string());
         }
 
-        pub fn is_move(&mut self, board_move: BoardMove) -> Result<(), String> {
+        fn is_move(&mut self, board_move: BoardMove) -> Result<(), String> {
             if (board_move.from_x == board_move.to_x) && (board_move.from_y == board_move.to_y) {
                 return Err("Cannot do nothing during your turn!".to_string());
             }
             return Ok(());
         }
-        pub fn is_pieces_same_color(&mut self, x1: BoardPos, y1: BoardPos, x2: BoardPos, y2: BoardPos) -> bool {
+        fn is_pieces_same_color(&mut self, x1: BoardPos, y1: BoardPos, x2: BoardPos, y2: BoardPos) -> bool {
             let piece1 = (*self.get_board_ref(x1, y1)).clone();
             let piece2 = (*self.get_board_ref(x2, y2)).clone();
             if piece1.is_some() && piece2.is_some() && piece1.unwrap().color == piece2.unwrap().color {
@@ -379,7 +384,7 @@ pub mod chess_game {
                 return false;
             }
         }
-        pub fn is_piece_id(&mut self, x: BoardPos, y: BoardPos, id: ChessPieceId) -> Result<(), String> {
+        fn is_piece_id(&mut self, x: BoardPos, y: BoardPos, id: ChessPieceId) -> Result<(), String> {
             if self.get_board_ref(x, y).is_some() && self.get_board_ref(x, y).unwrap().id == id {
                 return Ok(());
             }
@@ -412,6 +417,11 @@ pub mod chess_game {
             // make sure you are not moving opponents pieces
             if from_piece.as_ref().unwrap().color != self.turn {
                 return Err("Cannot move opponents pieces".to_string());
+            }
+
+            // make sure move count limit is not reached
+            if self.move_count_left == 0 {
+                return Err("Maximum move count reached".to_string());
             }
 
             // Do move depending on piece
@@ -449,12 +459,15 @@ pub mod chess_game {
                             + result3.err().unwrap().as_str())
                         .to_string());
                     }
+                    // Reset move count after succesfull move with pawn
+                    self.reset_move_count_left();
                 }
             }
+            self.move_count_left = self.move_count_left - 1;
             self.end_turn();
             return Ok(());
         }
-        pub fn inside_board(&mut self, x: BoardPos, y: BoardPos) -> Result<(), String> {
+        fn inside_board(&mut self, x: BoardPos, y: BoardPos) -> Result<(), String> {
             if x > 7 || y > 7 {
                 return Err("Outside of the board!".to_string());
             }
@@ -462,7 +475,7 @@ pub mod chess_game {
         }
 
         // End the turn and swith 
-        pub fn end_turn(&mut self) {
+        fn end_turn(&mut self) {
             if self.turn as u32 == ChessPieceColor::White as u32 {
                 self.turn = ChessPieceColor::Black;
             } else {
@@ -471,7 +484,7 @@ pub mod chess_game {
         }
 
         // Just moves the piece without any checking
-        pub fn force_move_piece(&mut self, board_move: BoardMove) {
+        fn force_move_piece(&mut self, board_move: BoardMove) {
             *self.get_board_ref(board_move.to_x, board_move.to_y) = self
                 .get_board_ref(board_move.from_x, board_move.from_y)
                 .take();
