@@ -1,4 +1,41 @@
 pub mod chess_game {
+    #[derive(Clone, Copy)]
+    pub enum ColorTerminal {
+        Black,
+        Red,
+        Green,
+        Yellow,
+        Blue,
+        Magenta,
+        LightBlue,
+        White,
+        Count,
+        Count2,
+        Count3,
+        Count4,
+    }
+    pub fn print_color(text: &str, text_color: ColorTerminal, background_color: ColorTerminal) {
+        //let background_mod_8 = background_color as i32 % 8;
+        let text_mod_8 = text_color as i32 % 8;
+        /*let text_mod;
+        if text_color as i32 > 7 {
+            text_mod = 1;
+        }
+        else {
+            text_mod = 0;
+        }*/
+
+        let background_mod_8 = background_color as i32 % 8;
+        /*let background_mod;
+        if background_color as i32 > 7 {
+            background_mod = 0;
+        }
+        else {
+            background_mod = 1;
+        }*/
+
+        print!("\x1b[{}m\x1b[{}m{}\x1b[m", 40+background_mod_8, 30+text_mod_8 as i32, text);
+    }
     use std::collections::LinkedList;
 
     type BoardPos = u8;
@@ -74,54 +111,32 @@ pub mod chess_game {
     pub struct ChessPiece {
         pub id: ChessPieceId,
         pub color: ChessPieceColor,
-        unicode_char: char,
-        moved: bool,
+        pub unicode_char: char,
+        pub moved: bool,
     }
 
     impl ChessPiece {
         pub fn new(id: ChessPieceId, color: ChessPieceColor) -> Self {
             let unicode_char;
-            match color {
-                ChessPieceColor::White => match id {
-                    ChessPieceId::Bishop => {
-                        unicode_char = '♝';
-                    }
-                    ChessPieceId::Rook => {
-                        unicode_char = '♜';
-                    }
-                    ChessPieceId::King => {
-                        unicode_char = '♚';
-                    }
-                    ChessPieceId::Queen => {
-                        unicode_char = '♛';
-                    }
-                    ChessPieceId::Knight => {
-                        unicode_char = '♞';
-                    }
-                    ChessPieceId::Pawn => {
-                        unicode_char = '♟';
-                    }
-                },
-                ChessPieceColor::Black => match id {
-                    ChessPieceId::Bishop => {
-                        unicode_char = '♗';
-                    }
-                    ChessPieceId::Rook => {
-                        unicode_char = '♖';
-                    }
-                    ChessPieceId::King => {
-                        unicode_char = '♔';
-                    }
-                    ChessPieceId::Queen => {
-                        unicode_char = '♕';
-                    }
-                    ChessPieceId::Knight => {
-                        unicode_char = '♘';
-                    }
-                    ChessPieceId::Pawn => {
-                        unicode_char = '♙';
-                    }
-                },
+            match id {
+                ChessPieceId::Bishop => {
+                    unicode_char = '♝';
+                }
+                ChessPieceId::Rook => {
+                    unicode_char = '♜';
+                }
+                ChessPieceId::King => {
+                    unicode_char = '♚';
+                }
+                ChessPieceId::Queen => {
+                    unicode_char = '♛';
+                }
+                ChessPieceId::Knight => {
+                    unicode_char = '♞';
+                }
+                ChessPieceId::Pawn => {
+                    unicode_char = '♟';
+                }
             }
             Self {
                 id: id,
@@ -184,19 +199,35 @@ pub mod chess_game {
             }
         }
         pub fn print_board(&mut self) {
-            println!("  01234567");
+            println!("  0 1 2 3 4 5 6 7");
             for y in 0..8 {
                 print!("{} ", y);
                 for x in 0..8 {
+                    let background_color;
+                    if (x + y) % 2 == 0 {
+                        background_color = ColorTerminal::LightBlue;
+                    }
+                    else {
+                        background_color = ColorTerminal::Blue;
+                    }
                     let board_ref = *self.get_board_ref(x, y);
                     if board_ref.is_none() {
-                        print!(".");
+                        print_color("  ", ColorTerminal::White, background_color);
                     } else {
-                        print!("{}", board_ref.as_ref().unwrap().unicode_char)
+                        if board_ref.as_ref().unwrap().color == ChessPieceColor::Black {
+                            print_color(board_ref.as_ref().unwrap().unicode_char.to_string().as_str(), ColorTerminal::Black, background_color);
+                            print_color(" ", ColorTerminal::Black, background_color);
+                        }
+                        else {
+                            print_color(board_ref.as_ref().unwrap().unicode_char.to_string().as_str(), ColorTerminal::White, background_color);
+                            print_color(" ", ColorTerminal::White, background_color);
+                        }
                     }
                 }
+                print!("{} ", y);
                 println!();
             }
+            println!("  0 1 2 3 4 5 6 7");
         }
         pub fn get_board_ref(&mut self, x: BoardPos, y: BoardPos) -> &mut Option<ChessPiece> {
             return &mut self.board[(x + 8 * y) as usize];
@@ -252,6 +283,7 @@ pub mod chess_game {
                                 board_move.from_x = x2;
                                 board_move.from_y = y2;
                                 let mut board_copy = (*self).clone();
+                                board_copy.end_turn(); // Make it the opponents turn
 
                                 // Checks if the move captures the king
                                 // If it takes the king, you dont have to think about check
@@ -377,6 +409,11 @@ pub mod chess_game {
                 }
             }
 
+            // make sure you are not moving opponents pieces
+            if from_piece.as_ref().unwrap().color != self.turn {
+                return Err("Cannot move opponents pieces".to_string());
+            }
+
             // Do move depending on piece
             match from_piece.as_ref().unwrap().id {
                 ChessPieceId::Bishop => {
@@ -439,7 +476,7 @@ pub mod chess_game {
                 .get_board_ref(board_move.from_x, board_move.from_y)
                 .take();
             if self.get_board_ref(board_move.to_x, board_move.to_y).is_some() {
-                self.get_board_ref(board_move.to_x, board_move.to_y).unwrap().moved = true;
+                self.get_board_ref(board_move.to_x, board_move.to_y).as_mut().unwrap().moved = true;
             }
             // Check for passant
             if self.last_move_passant == true && self.last_move.is_some() {
@@ -580,14 +617,14 @@ pub mod chess_game {
             self.board_move_not_same_color_pieces(board_move)?;
             self.board_move_is_forward(board_move)?;
 
-            // Make sure pawn is moving one to the side
-            if (board_move.to_x as i32 - board_move.from_x as i32).abs() != 1 {
-                return Err("Not moving one to the side".to_string());
-            }
-
             // Make sure pawn is moving one forward
             if (board_move.to_y as i32 - board_move.from_y as i32).abs() != 1 {
                 return Err("Not moving one forward".to_string());
+            }
+
+            // Make sure pawn is moving one to the side
+            if (board_move.to_x as i32 - board_move.from_x as i32).abs() != 1 {
+                return Err("Not moving one to the side".to_string());
             }
 
             // Make sure there is a piece to take
@@ -676,8 +713,8 @@ pub mod chess_game {
             else {
                 direction = -1;
             }
-            for i in 0..direction*2 {
-                let rook_x = (board_move.to_x as i32+i) as BoardPos;
+            for i in 1..3 {
+                let rook_x = (board_move.to_x as i32+i*direction) as BoardPos;
                 let rook_y = board_move.from_y;
                 if self.is_piece_id(rook_x, rook_y, ChessPieceId::Rook).is_ok() {
                     if self.get_board_ref(rook_x, rook_y).unwrap().moved == true {
@@ -691,9 +728,10 @@ pub mod chess_game {
                     let rook_move = BoardMove::new(rook_x, rook_y, 
                         (board_move.from_x as i32 + direction) as BoardPos, rook_y);
                     self.force_move_piece(rook_move);
+                    return Ok(());
                 }
             }
-            return Ok(());
+            return Err("No rook to move with".to_string());
         }
 
         fn bishop_move(&mut self, board_move: BoardMove) -> Result<(), String> {

@@ -4,10 +4,11 @@ use std::{
     num::ParseIntError,
 };
 
-use chess_engine::chess_game::{BoardMove, ChessPieceColor, ChessPieceId};
+use chess_engine::chess_game::{BoardMove, ChessPieceId};
 
 fn print_game_info(game: &mut chess_engine::chess_game::Game) {
     game.print_board();
+    use chess_engine::chess_game::*;
     if game.turn as u32 == ChessPieceColor::Black as u32 {
         println!("Black's turn");
     } else {
@@ -20,7 +21,7 @@ fn print_game_info(game: &mut chess_engine::chess_game::Game) {
     }
     println!();
     println!("from_x from_y to_x to_y, example '0 1 0 2'");
-    println!("Or: from_x from_y type, example '0 0 knight'");
+    println!("Or: 'from_x from_y type', example '0 0 knight'");
 }
 fn main() {
     let mut game = chess_engine::chess_game::Game::new();
