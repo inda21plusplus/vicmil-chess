@@ -307,7 +307,7 @@ mod chess_lib_test {
 
     #[test]
     fn castle_test() {
-        // Make sure you can castle
+        // Make sure you can castle to the left
         let mut game = Game::new();
         game.empty_board();
         game.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::White);
@@ -318,6 +318,18 @@ mod chess_lib_test {
         assert_eq!(game.get_board_piece_clone(3, 0).is_some(), false);
         assert_eq!(game.get_board_piece_clone(1, 0).unwrap().id == ChessPieceId::King, true);
         assert_eq!(game.get_board_piece_clone(2, 0).unwrap().id == ChessPieceId::Rook, true);
+
+        // Make sure you can castle to the right
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(7, 0, ChessPieceId::Rook, ChessPieceColor::White);
+        game.set_pos(3, 0, ChessPieceId::King, ChessPieceColor::White);
+        let board_move = BoardMove::new(3, 0, 5, 0);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), true);
+        assert_eq!(game.get_board_piece_clone(7, 0).is_some(), false);
+        assert_eq!(game.get_board_piece_clone(3, 0).is_some(), false);
+        assert_eq!(game.get_board_piece_clone(5, 0).unwrap().id == ChessPieceId::King, true);
+        assert_eq!(game.get_board_piece_clone(4, 0).unwrap().id == ChessPieceId::Rook, true);
 
         // Make sure you cannot castle if king has moved
         let mut game = Game::new();
