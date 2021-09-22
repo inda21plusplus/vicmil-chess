@@ -17,8 +17,8 @@ fn print_game_info(game: &mut chess_engine::chess_game::Game) {
         print!("{} {} {} {}", check.unwrap().from_x, check.unwrap().from_y, check.unwrap().to_x, check.unwrap().to_y);
     }
     println!();
-    println!("algebraic notation, ex Na3 to move knight to a3");
-    println!("or, print possible moves: ex 'moves a2' to print all moves for a4");
+    println!("Algebraic notation, ex Na6 to move knight to a6.");
+    println!("Or, print possible moves: ex 'moves a7' to print all moves for a7");
 }
 
 fn main() {
