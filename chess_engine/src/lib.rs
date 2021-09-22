@@ -732,6 +732,10 @@ pub mod chess_game {
 
         // Just moves the piece without any checking
         fn force_move_piece(&mut self, board_move: BoardMove) {
+            if self.get_board_ref(board_move.to_x, board_move.to_y).is_some(){
+                // Reset move count after capture
+                self.reset_move_count_left();
+            }
             *self.get_board_ref(board_move.to_x, board_move.to_y) = self
                 .get_board_ref(board_move.from_x, board_move.from_y)
                 .take();
