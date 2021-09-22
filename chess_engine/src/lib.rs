@@ -719,7 +719,6 @@ pub mod chess_game {
             return Ok(());
         }
 
-        // End the turn and swith 
         fn end_turn(&mut self) {
             if self.turn as u32 == ChessPieceColor::White as u32 {
                 self.turn = ChessPieceColor::Black;

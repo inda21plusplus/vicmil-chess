@@ -14,7 +14,6 @@ fn print_game_info(game: &mut chess_engine::chess_game::Game) {
     let check = game.is_check();
     if check.is_some() {
         println!("Check!");
-        print!("{} {} {} {}", check.unwrap().from_x, check.unwrap().from_y, check.unwrap().to_x, check.unwrap().to_y);
     }
     println!();
     println!("Algebraic notation, ex Na3 to move knight to a3.");
