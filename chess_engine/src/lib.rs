@@ -931,6 +931,19 @@ pub mod chess_game {
             else {
                 direction = -1;
             }
+            // Make sure it is not check on any of the squares king is moving on
+            for i in 0..3 {
+                // Make a clone of the board
+                let mut board_copy = self.clone();
+
+                // Move the king and check for check
+                board_copy.set_pos_to_none(board_move.from_x, board_move.from_y);
+                board_copy.set_pos((board_move.from_x as i32+i*direction) as BoardPos, board_move.to_y, ChessPieceId::King, self.turn);
+                if board_copy.is_check().is_some() {
+                    return Err("Cannot castle on checked square".to_string());
+                }
+
+            }
             for i in 1..3 {
                 let rook_x = (board_move.to_x as i32+i*direction) as BoardPos;
                 let rook_y = board_move.from_y;
@@ -938,9 +951,7 @@ pub mod chess_game {
                     if self.get_board_ref(rook_x, rook_y).unwrap().moved == true {
                         return Err("Cannot castle with moved rook".to_string());
                     }
-                    // Make sure it is not chess on any of the squares
-
-
+                    
                     // Move king and rook
                     self.force_move_piece(board_move);
                     let rook_move = BoardMove::new(rook_x, rook_y, 
