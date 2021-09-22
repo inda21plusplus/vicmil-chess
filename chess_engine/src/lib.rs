@@ -36,7 +36,11 @@ pub mod chess_game {
 
         print!("\x1b[{}m\x1b[{}m{}\x1b[m", 40+background_mod_8, 30+text_mod_8 as i32, text);
     }
-    use std::collections::LinkedList;
+    use std::{collections::LinkedList};
+    use std::{
+        io::{self, BufRead},
+        num::ParseIntError,
+    };
 
     type BoardPos = u8;
 
@@ -370,6 +374,233 @@ pub mod chess_game {
                 return false;
             }
         }
+        pub fn move_piece(&mut self, board_move: BoardMove, check_for_check: bool) -> Result<(), String> {
+            self.is_move(board_move)?;
+            self.inside_board(board_move.from_x, board_move.from_y)?;
+            self.inside_board(board_move.to_x, board_move.to_y)?;
+            let from_piece = self
+                .get_board_ref(board_move.from_x, board_move.from_y)
+                .clone();
+            if from_piece.is_none() {
+                return Err("No piece on square selected!".to_string());
+            }
+            self.board_move_not_same_color_pieces(board_move)?;
+
+            // Make sure move does not lead to check
+            if check_for_check {
+                let mut self_copy = self.clone();
+                self_copy.move_piece(board_move, false)?;
+                self_copy.turn = self.turn;
+                if self_copy.is_check().is_some() {
+                    return Err("Move leads to check!".to_string());
+                }
+            }
+
+            // make sure you are not moving opponents pieces
+            if from_piece.as_ref().unwrap().color != self.turn {
+                return Err("Cannot move opponents pieces".to_string());
+            }
+
+            // make sure move count limit is not reached
+            if self.move_count_left == 0 {
+                return Err("Maximum move count reached".to_string());
+            }
+
+            // Do move depending on piece
+            match from_piece.as_ref().unwrap().id {
+                ChessPieceId::Bishop => {
+                    self.bishop_move(board_move)?;
+                }
+                ChessPieceId::Rook => {
+                    self.rook_move(board_move)?;
+                }
+                ChessPieceId::King => {
+                    let result1 = self.king_move_one(board_move);
+                    let result2 = self.king_castle(board_move);
+                    if result1.is_err() && result2.is_err() {
+                        return Err(
+                            (result1.err().unwrap() + result2.err().unwrap().as_str()).to_string()
+                        );
+                    }
+                }
+                ChessPieceId::Queen => {
+                    self.queen_move(board_move)?;
+                }
+                ChessPieceId::Knight => {
+                    self.knight_move(board_move)?;
+                }
+                ChessPieceId::Pawn => {
+                    let result1 = self.pawn_one_forward(board_move);
+                    let result2 = self.pawn_two_forward(board_move);
+                    let result3 = self.pawn_take(board_move);
+                    if result1.is_err() && result2.is_err() && result3.is_err() {
+                        return Err((result1.err().unwrap()
+                            + ", "
+                            + result2.err().unwrap().as_str()
+                            + ", "
+                            + result3.err().unwrap().as_str())
+                        .to_string());
+                    }
+                    // Reset move count after succesfull move with pawn
+                    self.reset_move_count_left();
+                }
+            }
+            self.move_count_left = self.move_count_left - 1;
+            self.end_turn();
+            return Ok(());
+        }
+        pub fn convert(
+            &mut self,
+            x: BoardPos,
+            y: BoardPos,
+            to_id: ChessPieceId,
+        ) -> Result<(), String> {
+            self.inside_board(x, y)?;
+            if to_id == ChessPieceId::Pawn {
+                return Err("Cannot convert to pawn!".to_string());
+            }
+            if to_id as u32 == ChessPieceId::King as u32 {
+                return Err("Cannot convert to king!".to_string());
+            }
+            let piece = (*self.get_board_ref(x, y)).clone();
+            if piece.is_none() {
+                return Err("Cannot convert from nothing!".to_string());
+            }
+            if piece.unwrap().id != ChessPieceId::Pawn {
+                return Err("Cannot convert something other than pawn!".to_string());
+            }
+            if piece.unwrap().color != self.turn {
+                return Err("Cannot convert opponents pieces!".to_string());
+            }
+            // Make sure piece is in the right place
+            if (piece.unwrap().color == ChessPieceColor::Black && y == 7)
+                || (piece.unwrap().color as u32 == ChessPieceColor::White as u32 && y == 0)
+            {
+                // Convert piece
+                (*self.get_board_ref(x, y)).as_mut().unwrap().id = to_id;
+                self.end_turn();
+                return Ok(());
+            } else {
+                return Err("Cannot convert pawn not on other side".to_string());
+            }
+        }
+        pub fn algebraic_notation_move(&mut self, text: String) -> Result<Option<BoardMove>, String> {
+            let char_vec: Vec<char> = text.chars().collect();
+            let mut from_piece_type: Option<ChessPieceId> = None;
+            if text.len() > 5 {
+                return Err("input string too long".to_string());
+            }
+            if text.len() == 2 {
+                let to_x: BoardPos = self.get_coordinate_by_letter(char_vec[0])?;
+                let to_y: BoardPos = self.get_coordinte_from_number(char_vec[1])?;
+                self.inside_board(to_x, to_y)?;
+
+                // Treat it as a move with a peasant
+                let mut board_move = None;
+                for from_x in 0..8 {
+                    for from_y in 0..8 {
+                        // Iterate pieces and see if it is a pawn that can move there
+                        let from_piece = self.get_board_piece_clone(from_x, from_y);
+                        if from_piece.is_some() 
+                        && from_piece.unwrap().color == self.turn 
+                        && from_piece.unwrap().id == ChessPieceId::Pawn {
+                            let mut board_copy = self.clone();
+                            let test_move = BoardMove::new(from_x, from_y, to_x, to_y);
+                            if board_copy.move_piece(test_move, true).is_ok() {
+                                if board_move.is_some() {
+                                    return Err("Unclear which piece is to move".to_string());
+                                }
+                                board_move = Some(test_move);
+                            }
+
+                        }
+                    }
+                }
+            }
+            if text.len() == 3 {
+                if char_vec[0].is_uppercase() {
+                    // Treat first element as a piece type
+                    let piece_type = self.get_piece_type_by_letter(char_vec[0])?;
+                    let to_x: BoardPos = self.get_coordinate_by_letter(char_vec[0])?;
+                    let to_y: BoardPos = self.get_coordinte_from_number(char_vec[1])?;
+                    let mut board_move = None;
+                    for from_x in 0..8 {
+                        for from_y in 0..8 {
+                            // Iterate pieces and see if it is a pawn that can move there
+                            let from_piece = self.get_board_piece_clone(from_x, from_y);
+                            if from_piece.is_some() 
+                            && from_piece.unwrap().color == self.turn 
+                            && from_piece.unwrap().id == piece_type {
+                                // Make a copy of the board and try to move there
+                                let mut board_copy = self.clone();
+                                let test_move = BoardMove::new(from_x, from_y, to_x, to_y);
+                                if board_copy.move_piece(test_move, true).is_ok() {
+                                    // Make sure there are not multiple pieces that can do that move
+                                    if board_move.is_some() {
+                                        return Err("Unclear which piece is to move".to_string());
+                                    }
+                                    board_move = Some(test_move);
+                                }
+
+                            }
+                        }
+                    }
+                    if board_move.is_none() {
+                        return Err("No piece to do the move".to_string());
+                    }
+                    self.move_piece(board_move.unwrap(), true);
+                    return Ok(Some(board_move.unwrap()));
+                }   
+                else {
+                    // Treat it as a promotion of a pawn
+                    let to_x: BoardPos = self.get_coordinate_by_letter(char_vec[0])?;
+                    let to_y: BoardPos = self.get_coordinte_from_number(char_vec[1])?;
+                    let to_id = self.get_piece_type_by_letter(char_vec[0])?;
+                    self.inside_board(to_x, to_y)?;
+                    self.convert(to_x, to_y, to_id)?;
+                    return Ok(None);
+                }
+            }
+            if text.len() == 4 {
+
+            }
+            
+            return Err("Could not parse input".to_string());
+        }
+        pub fn translate_move_to_algebraic_notation(board_move: BoardMove)-> Result<String, String> {
+            return Err("Not implemented yet".to_string());
+        }
+        fn get_piece_type_by_letter(&mut self, letter: char) -> Result<ChessPieceId, String> {
+            match letter {
+                'R' => return Ok(ChessPieceId::Rook),
+                'P' => return Ok(ChessPieceId::Pawn),
+                'Q' => return Ok(ChessPieceId::Queen),
+                'K' => return Ok(ChessPieceId::King),
+                'N' => return Ok(ChessPieceId::Knight),
+                'B' => return Ok(ChessPieceId::Bishop),
+                _ => return Err("No matching type".to_string())
+            }
+        }
+        fn get_coordinate_by_letter(&mut self, letter: char) -> Result<BoardPos, String> {
+            match letter {
+                'a' => return Ok(0),
+                'b' => return Ok(1),
+                'c' => return Ok(2),
+                'd' => return Ok(3),
+                'e' => return Ok(4),
+                'f' => return Ok(5),
+                'g' => return Ok(6),
+                'h' => return Ok(7),
+                _ => return Err("Could not parse coordinate letter".to_string())
+            }
+        }
+        fn get_coordinte_from_number(&mut self, letter: char) -> Result<BoardPos, String> {
+            let result: Result<BoardPos, ParseIntError> = letter.to_string().parse();
+            if result.is_err() || result.clone().unwrap() == 0 {
+                return Err("Could not parse coordinate number".to_string());
+            }
+            return Ok(result.unwrap() - 1);
+        }
         fn is_unblocked_straight_line(&mut self, board_move: BoardMove) -> Result<(), String> {
             // Make sure it is a straight line
             if board_move.from_x == board_move.to_x {
@@ -460,81 +691,6 @@ pub mod chess_game {
                 return Err("Piece id does not match".to_string());
             }
         }
-        pub fn move_piece(&mut self, board_move: BoardMove, check_for_check: bool) -> Result<(), String> {
-            self.is_move(board_move)?;
-            self.inside_board(board_move.from_x, board_move.from_y)?;
-            self.inside_board(board_move.to_x, board_move.to_y)?;
-            let from_piece = self
-                .get_board_ref(board_move.from_x, board_move.from_y)
-                .clone();
-            if from_piece.is_none() {
-                return Err("No piece on square selected!".to_string());
-            }
-            self.board_move_not_same_color_pieces(board_move)?;
-
-            // Make sure move does not lead to check
-            if check_for_check {
-                let mut self_copy = self.clone();
-                self_copy.move_piece(board_move, false)?;
-                self_copy.turn = self.turn;
-                if self_copy.is_check().is_some() {
-                    return Err("Move leads to check!".to_string());
-                }
-            }
-
-            // make sure you are not moving opponents pieces
-            if from_piece.as_ref().unwrap().color != self.turn {
-                return Err("Cannot move opponents pieces".to_string());
-            }
-
-            // make sure move count limit is not reached
-            if self.move_count_left == 0 {
-                return Err("Maximum move count reached".to_string());
-            }
-
-            // Do move depending on piece
-            match from_piece.as_ref().unwrap().id {
-                ChessPieceId::Bishop => {
-                    self.bishop_move(board_move)?;
-                }
-                ChessPieceId::Rook => {
-                    self.rook_move(board_move)?;
-                }
-                ChessPieceId::King => {
-                    let result1 = self.king_move_one(board_move);
-                    let result2 = self.king_castle(board_move);
-                    if result1.is_err() && result2.is_err() {
-                        return Err(
-                            (result1.err().unwrap() + result2.err().unwrap().as_str()).to_string()
-                        );
-                    }
-                }
-                ChessPieceId::Queen => {
-                    self.queen_move(board_move)?;
-                }
-                ChessPieceId::Knight => {
-                    self.knight_move(board_move)?;
-                }
-                ChessPieceId::Pawn => {
-                    let result1 = self.pawn_one_forward(board_move);
-                    let result2 = self.pawn_two_forward(board_move);
-                    let result3 = self.pawn_take(board_move);
-                    if result1.is_err() && result2.is_err() && result3.is_err() {
-                        return Err((result1.err().unwrap()
-                            + ", "
-                            + result2.err().unwrap().as_str()
-                            + ", "
-                            + result3.err().unwrap().as_str())
-                        .to_string());
-                    }
-                    // Reset move count after succesfull move with pawn
-                    self.reset_move_count_left();
-                }
-            }
-            self.move_count_left = self.move_count_left - 1;
-            self.end_turn();
-            return Ok(());
-        }
         fn inside_board(&mut self, x: BoardPos, y: BoardPos) -> Result<(), String> {
             if x > 7 || y > 7 {
                 return Err("Outside of the board!".to_string());
@@ -603,44 +759,6 @@ pub mod chess_game {
                 }
             }
         }
-
-        // Moves
-        pub fn convert(
-            &mut self,
-            x: BoardPos,
-            y: BoardPos,
-            to_id: ChessPieceId,
-        ) -> Result<(), String> {
-            self.inside_board(x, y)?;
-            if to_id == ChessPieceId::Pawn {
-                return Err("Cannot convert to pawn!".to_string());
-            }
-            if to_id as u32 == ChessPieceId::King as u32 {
-                return Err("Cannot convert to king!".to_string());
-            }
-            let piece = (*self.get_board_ref(x, y)).clone();
-            if piece.is_none() {
-                return Err("Cannot convert from nothing!".to_string());
-            }
-            if piece.unwrap().id != ChessPieceId::Pawn {
-                return Err("Cannot convert something other than pawn!".to_string());
-            }
-            if piece.unwrap().color != self.turn {
-                return Err("Cannot convert opponents pieces!".to_string());
-            }
-            // Make sure piece is in the right place
-            if (piece.unwrap().color == ChessPieceColor::Black && y == 7)
-                || (piece.unwrap().color as u32 == ChessPieceColor::White as u32 && y == 0)
-            {
-                // Convert piece
-                (*self.get_board_ref(x, y)).as_mut().unwrap().id = to_id;
-                self.end_turn();
-                return Ok(());
-            } else {
-                return Err("Cannot convert pawn not on other side".to_string());
-            }
-        }
-
 
         fn pawn_one_forward(&mut self, board_move: BoardMove) -> Result<(), String> {
             self.is_piece_id(board_move.from_x, board_move.from_y, ChessPieceId::Pawn)?;
