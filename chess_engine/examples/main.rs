@@ -5,6 +5,20 @@ use std::{
 
 fn print_game_info(game: &mut chess_engine::chess_game::Game) {
     game.print_board();
+    if game.game_is_over() {
+        let winner = game.get_winner();
+        println!("Game is over!");
+        if winner == None {
+            println!("Draw");
+        }
+        else if winner.unwrap() == ChessPieceColor::White {
+            println!("White wins!");
+        }
+        else if winner.unwrap() == ChessPieceColor::Black {
+            println!("Black wins!");
+        }
+        return;
+    }
     use chess_engine::chess_game::*;
     if game.turn as u32 == ChessPieceColor::Black as u32 {
         println!("Black's turn");

@@ -422,6 +422,7 @@ mod chess_lib_test {
         assert_eq!(game.is_check().is_some(), true);
         assert_eq!(game.get_possible_moves().is_empty(), true);
         assert_eq!(game.is_check_mate(), true);
+        assert_eq!(game.get_winner().unwrap() == ChessPieceColor::Black, true);
 
         // make sure program does not give false check mates
         let mut game = Game::new();
@@ -432,6 +433,7 @@ mod chess_lib_test {
         assert_eq!(game.is_check().is_some(), true);
         assert_eq!(game.get_possible_moves().is_empty(), false);
         assert_eq!(game.is_check_mate(), false);
+        assert_eq!(game.get_winner() == None, true);
 
         // Make sure it is not check mate when the game starts
         let mut game = Game::new();
@@ -469,6 +471,7 @@ mod chess_lib_test {
         assert_eq!(game.is_check().is_some(), false);
         assert_eq!(game.get_possible_moves().is_empty(), true);
         assert_eq!(game.is_stale_mate(), true);
+        assert_eq!(game.get_winner() == None, true);
 
         // Make sure it is not stale mate when the game starts
         let mut game = Game::new();
