@@ -1,4 +1,7 @@
 pub mod chess_game {
+    use std::{collections::LinkedList};
+    use std::{num::ParseIntError};
+
     #[derive(Clone, Copy)]
     pub enum ColorTerminal {
         Black,
@@ -9,37 +12,13 @@ pub mod chess_game {
         Magenta,
         LightBlue,
         White,
-        Count,
-        Count2,
-        Count3,
-        Count4,
     }
     pub fn print_color(text: &str, text_color: ColorTerminal, background_color: ColorTerminal) {
         //let background_mod_8 = background_color as i32 % 8;
         let text_mod_8 = text_color as i32 % 8;
-        /*let text_mod;
-        if text_color as i32 > 7 {
-            text_mod = 1;
-        }
-        else {
-            text_mod = 0;
-        }*/
-
         let background_mod_8 = background_color as i32 % 8;
-        /*let background_mod;
-        if background_color as i32 > 7 {
-            background_mod = 0;
-        }
-        else {
-            background_mod = 1;
-        }*/
-
         print!("\x1b[{}m\x1b[{}m{}\x1b[m", 40+background_mod_8, 30+text_mod_8 as i32, text);
     }
-    use std::{collections::LinkedList};
-    use std::{
-        num::ParseIntError,
-    };
 
     type BoardPos = u8;
 
@@ -172,9 +151,7 @@ pub mod chess_game {
                 move_count_left: 100 // Since it is 50 moves per player
             }
         }
-        fn reset_move_count_left(&mut self) {
-            self.move_count_left = 100;
-        }
+
         pub fn set_up_board(&mut self) {
             self.empty_board();
             self.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::Black);
@@ -201,58 +178,148 @@ pub mod chess_game {
                 self.set_pos(x, 6, ChessPieceId::Pawn, ChessPieceColor::White);
             }
         }
+
+        // Move a piece using algebraic notation
+        pub fn algebraic_notation_move(&mut self, text: String) -> Result<Option<BoardMove>, String> {
+            // Make sure input is not too long
+            if text.len() < 2 || text.len() > 10 {
+                return Err("Invalid input size".to_string())
+            }
+
+            // Remove unnecesary letters
+            let text = text.replace(&['(', ')', ',', '\"', '.', ';', 'X', 'x', ':', '='][..], "");
+
+            #[allow(unused_assignments)]
+            let mut piece_type: Option<ChessPieceId> = None;
+            #[allow(unused_assignments)]
+            let mut to_x_input: Option<BoardPos> = None;
+            #[allow(unused_assignments)]
+            let mut to_y_input: Option<BoardPos> = None;
+            let mut from_x_input: Option<BoardPos> = None;
+            let mut from_y_input: Option<BoardPos> = None;
+
+            let char_vec: Vec<char> = text.chars().collect();
+            if char_vec.len() < 2 {
+                return Err("Could not parse move".to_string());
+            }
+            if char_vec.len() == 2 {
+                // Treat it as a pawn move
+                piece_type = Some(ChessPieceId::Pawn);
+                to_x_input = Some(self.get_coordinate_from_letter(char_vec[0])?);
+                to_y_input = Some(self.get_coordinte_from_number(char_vec[1])?);
+            }
+            else {
+                let result = self.get_piece_type_from_letter(char_vec[0]);
+                if result.is_ok() {
+                    piece_type = Some(result.unwrap());
+                    if char_vec.len() == 3 {
+                        to_x_input = Some(self.get_coordinate_from_letter(char_vec[1])?);
+                        to_y_input = Some(self.get_coordinte_from_number(char_vec[2])?);
+                    }
+                    else if char_vec.len() == 4 {
+                        let result_letter = self.get_coordinate_from_letter(char_vec[1]);
+                        let result_number = self.get_coordinte_from_number(char_vec[2]);
+                        if result_letter.is_ok() {
+                            #[allow(unused_assignments)]
+                            {
+                                to_x_input = Some(result_letter.unwrap());
+                            }
+                        }
+                        else if result_number.is_ok() {
+                            #[allow(unused_assignments)]
+                            {
+                                to_y_input = Some(result_number.unwrap());
+                            }
+                        }
+                        to_x_input = Some(self.get_coordinate_from_letter(char_vec[2])?);
+                        to_y_input = Some(self.get_coordinte_from_number(char_vec[3])?);
+                    }
+                    else if char_vec.len() == 5 {
+                        from_x_input = Some(self.get_coordinate_from_letter(char_vec[1])?);
+                        from_y_input = Some(self.get_coordinte_from_number(char_vec[2])?);
+                        to_x_input = Some(self.get_coordinate_from_letter(char_vec[3])?);
+                        to_y_input = Some(self.get_coordinte_from_number(char_vec[4])?);
+                    }
+                    else {
+                        return Err("Could not parse input".to_string());
+                    }
+                }
+                else if char_vec.len() == 3 {
+                    // Treat it as a promotion
+                    to_x_input = Some(self.get_coordinate_from_letter(char_vec[0])?);
+                    to_y_input = Some(self.get_coordinte_from_number(char_vec[1])?);
+                    piece_type = Some(self.get_piece_type_from_letter(char_vec[2])?);
+                    self.inside_board(to_x_input.unwrap(), to_y_input.unwrap())?;
+                    self.promote(to_x_input.unwrap(), to_y_input.unwrap(), piece_type.unwrap())?;
+                    return Ok(None);
+                }
+                else {
+                    return Err("Could not parse input".to_string());
+                }
+            }
+
+            let mut board_move: Option<BoardMove> = None;
+
+            for from_x in 0..8 {
+                for from_y in 0..8 {
+                    // If from position is speciefied, make sure it follows that
+                    if from_x_input.is_some() && from_x_input.unwrap() != from_x {
+                        continue;
+                    }
+                    if from_y_input.is_some() && from_y_input.unwrap() != from_y {
+                        continue;
+                    }
+                    // Iterate pieces and see if the piece can move there
+                    let from_piece = self.get_board_piece_clone(from_x, from_y);
+                    if from_piece.is_some() 
+                    && from_piece.unwrap().color == self.turn 
+                    && from_piece.unwrap().id == piece_type.unwrap() {
+                        // Make a copy of the board and try to move there
+                        let mut board_copy = self.clone();
+                        let test_move = BoardMove::new(from_x, from_y, to_x_input.unwrap(), to_y_input.unwrap());
+                        if board_copy.move_piece(test_move, true).is_ok() {
+                            // Make sure there are not multiple pieces that can do that move
+                            if board_move.is_some() {
+                                return Err("Unclear which piece is to move".to_string());
+                            }
+                            board_move = Some(test_move);
+                        }
+
+                    }
+                }
+            }
+            
+            if board_move.is_none() {
+                return Err("Could not do move".to_string());
+            }
+            self.move_piece(board_move.unwrap(), true)?;
+            return Ok(None)
+        }
+
+        // Set all postitions on the board to none
         pub fn empty_board(&mut self) {
             for i in 0..self.board.len() {
                 self.board[i] = None;
             }
         }
+
         pub fn print_board(&mut self) {
-            println!("  a b c d e f g h");
-            for y in 0..8 {
-                //print!("{} ", y);
-                print!("{} ", y+1);
-                for x in 0..8 {
-                    let background_color;
-                    if (x + y) % 2 == 1 {
-                        background_color = ColorTerminal::LightBlue;
-                    }
-                    else {
-                        background_color = ColorTerminal::Blue;
-                    }
-                    let board_ref = *self.get_board_ref(x, y);
-                    if board_ref.is_none() {
-                        print_color("  ", ColorTerminal::White, background_color);
-                    } else {
-                        if board_ref.as_ref().unwrap().color == ChessPieceColor::Black {
-                            print_color(board_ref.as_ref().unwrap().unicode_char.to_string().as_str(), ColorTerminal::Black, background_color);
-                            print_color(" ", ColorTerminal::Black, background_color);
-                        }
-                        else {
-                            print_color(board_ref.as_ref().unwrap().unicode_char.to_string().as_str(), ColorTerminal::White, background_color);
-                            print_color(" ", ColorTerminal::White, background_color);
-                        }
-                    }
-                }
-                print!("{} ", y + 1);
-                //print!("{} ", y);
-                println!();
-            }
-            println!("  a b c d e f g h");
-            //println!("  0 1 2 3 4 5 6 7");
+            self.print_board_with_possible_moves(false, 0, 0);
         }
-        pub fn print_board_with_possible_moves(&mut self, from_x: BoardPos, from_y: BoardPos) {
+
+        pub fn print_board_with_possible_moves(&mut self, print_possible_moves: bool, from_x: BoardPos, from_y: BoardPos) {
             println!("  a b c d e f g h");
             for y in 0..8 {
                 print!("{} ", y+1);
                 for x in 0..8 {
                     let background_color;
-                    // Color square red if piece can move there
                     let board_move = BoardMove::new(from_x, from_y, x, y);
                     let mut board_copy = self.clone();
-                    if board_copy.move_piece(board_move, true).is_ok() {
+                    if print_possible_moves && board_copy.move_piece(board_move, true).is_ok() {
+                        // Color square red if piece can move there
                         background_color = ColorTerminal::Red;
                     }
-                    else if from_x == x && from_y == y {
+                    else if print_possible_moves && from_x == x && from_y == y {
                         background_color = ColorTerminal::Green;
                     }
                     else if (x + y) % 2 == 1 {
@@ -261,8 +328,10 @@ pub mod chess_game {
                     else {
                         background_color = ColorTerminal::Blue;
                     }
+                    // Get a reference to a position on the board
                     let board_ref = *self.get_board_ref(x, y);
                     if board_ref.is_none() {
+                        // If there is nothing there, just print two spaces
                         print_color("  ", ColorTerminal::White, background_color);
                     } else {
                         if board_ref.as_ref().unwrap().color == ChessPieceColor::Black {
@@ -280,12 +349,18 @@ pub mod chess_game {
             }
             println!("  a b c d e f g h");
         }
+
+        // Get a reference to a coordinate on the board
         pub fn get_board_ref(&mut self, x: BoardPos, y: BoardPos) -> &mut Option<ChessPiece> {
             return &mut self.board[(x + 8 * y) as usize];
         }
+
+        // Get a clone of a position on the board
         pub fn get_board_piece_clone(&mut self, x: BoardPos, y: BoardPos) -> Option<ChessPiece> {
             return (*self.get_board_ref(x, y)).clone();
         }
+
+        // Set a position on the board
         pub fn set_pos(
             &mut self,
             x: BoardPos,
@@ -295,35 +370,24 @@ pub mod chess_game {
         ) {
             *self.get_board_ref(x, y) = Some(ChessPiece::new(id, color));
         }
-        pub fn get_possible_moves(&mut self) -> LinkedList<BoardMove> {
-            let mut board_moves:LinkedList<BoardMove> = Default::default();
-            for x in 0..8 {
-                for y in 0..8 {
-                    let piece = (self.get_board_ref(x, y)).clone();
-                    // If it is a king
-                    if piece.is_some() && piece.unwrap().color == self.turn
-                    {
-                        for x2 in 0..8 {
-                            for y2 in 0..8 {
-                                // Iterate spaces to see if it can move there
-                                let board_move = BoardMove::new(x, y, x2, y2);
-                                let mut board_copy = self.clone();
-                                if board_copy.move_piece(board_move, true).is_ok() {
-                                    board_moves.push_back(board_move);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return board_moves;
+
+        pub fn set_pos_to_none(
+            &mut self,
+            x: BoardPos,
+            y: BoardPos,
+        ) {
+            *self.get_board_ref(x, y) = None;
         }
+
+        // Returns true if the game is over
         pub fn game_is_over(&mut self) -> bool {
             if self.is_check_mate() || self.is_stale_mate() {
                 return true;
             }
             return false;
         }
+
+        // Returns if there is a winner, and what color it is
         pub fn get_winner(&mut self) -> Option<ChessPieceColor> {
             if self.is_check_mate() {
                 if self.turn == ChessPieceColor::White {
@@ -337,6 +401,7 @@ pub mod chess_game {
                 return None;
             }
         }
+
         pub fn is_check(&mut self) -> Option<BoardMove> {
             for x in 0..8 {
                 for y in 0..8 {
@@ -363,6 +428,7 @@ pub mod chess_game {
             }
             return None;
         }
+
         pub fn is_check_mate(&mut self) -> bool{
             if self.is_check().is_some() && self.get_possible_moves().is_empty() {
                 return true;
@@ -371,6 +437,7 @@ pub mod chess_game {
                 return false;
             }
         }
+
         pub fn is_stale_mate(&mut self) -> bool{
             if self.is_check().is_none() && self.get_possible_moves().is_empty() {
                 return true;
@@ -379,6 +446,31 @@ pub mod chess_game {
                 return false;
             }
         }
+
+        pub fn get_possible_moves(&mut self) -> LinkedList<BoardMove> {
+            let mut board_moves:LinkedList<BoardMove> = Default::default();
+            for x in 0..8 {
+                for y in 0..8 {
+                    let piece = (self.get_board_ref(x, y)).clone();
+                    // If it is a king
+                    if piece.is_some() && piece.unwrap().color == self.turn
+                    {
+                        for x2 in 0..8 {
+                            for y2 in 0..8 {
+                                // Iterate spaces to see if it can move there
+                                let board_move = BoardMove::new(x, y, x2, y2);
+                                let mut board_copy = self.clone();
+                                if board_copy.move_piece(board_move, true).is_ok() {
+                                    board_moves.push_back(board_move);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return board_moves;
+        }
+
         pub fn move_piece(&mut self, board_move: BoardMove, check_for_check: bool) -> Result<(), String> {
             self.is_move(board_move)?;
             self.inside_board(board_move.from_x, board_move.from_y)?;
@@ -454,7 +546,8 @@ pub mod chess_game {
             self.end_turn();
             return Ok(());
         }
-        pub fn convert(
+
+        pub fn promote(
             &mut self,
             x: BoardPos,
             y: BoardPos,
@@ -489,122 +582,7 @@ pub mod chess_game {
                 return Err("Cannot convert pawn not on other side".to_string());
             }
         }
-        pub fn algebraic_move(&mut self, text: String) -> Result<Option<BoardMove>, String> {
-            // Make sure input is not too long
-            if text.len() < 2 || text.len() > 10 {
-                return Err("Invalid input size".to_string())
-            }
-
-            // Remove unnecesary letters
-            let text = text.replace(&['(', ')', ',', '\"', '.', ';', 'X', 'x', ':', '='][..], "");
-
-            #[allow(unused_assignments)]
-            let mut piece_type: Option<ChessPieceId> = None;
-            #[allow(unused_assignments)]
-            let mut to_x_input: Option<BoardPos> = None;
-            #[allow(unused_assignments)]
-            let mut to_y_input: Option<BoardPos> = None;
-            let mut from_x_input: Option<BoardPos> = None;
-            let mut from_y_input: Option<BoardPos> = None;
-
-            let char_vec: Vec<char> = text.chars().collect();
-            if char_vec.len() < 2 {
-                return Err("Could not parse move".to_string());
-            }
-            if char_vec.len() == 2 {
-                // Treat it as a pawn move
-                piece_type = Some(ChessPieceId::Pawn);
-                to_x_input = Some(self.get_coordinate_by_letter(char_vec[0])?);
-                to_y_input = Some(self.get_coordinte_from_number(char_vec[1])?);
-            }
-            else {
-                let result = self.get_piece_type_by_letter(char_vec[0]);
-                if result.is_ok() {
-                    piece_type = Some(result.unwrap());
-                    if char_vec.len() == 3 {
-                        to_x_input = Some(self.get_coordinate_by_letter(char_vec[1])?);
-                        to_y_input = Some(self.get_coordinte_from_number(char_vec[2])?);
-                    }
-                    else if char_vec.len() == 4 {
-                        let result_letter = self.get_coordinate_by_letter(char_vec[1]);
-                        let result_number = self.get_coordinte_from_number(char_vec[2]);
-                        if result_letter.is_ok() {
-                            #[allow(unused_assignments)]
-                            {
-                                to_x_input = Some(result_letter.unwrap());
-                            }
-                        }
-                        else if result_number.is_ok() {
-                            #[allow(unused_assignments)]
-                            {
-                                to_y_input = Some(result_number.unwrap());
-                            }
-                        }
-                        to_x_input = Some(self.get_coordinate_by_letter(char_vec[2])?);
-                        to_y_input = Some(self.get_coordinte_from_number(char_vec[3])?);
-                    }
-                    else if char_vec.len() == 5 {
-                        from_x_input = Some(self.get_coordinate_by_letter(char_vec[1])?);
-                        from_y_input = Some(self.get_coordinte_from_number(char_vec[2])?);
-                        to_x_input = Some(self.get_coordinate_by_letter(char_vec[3])?);
-                        to_y_input = Some(self.get_coordinte_from_number(char_vec[4])?);
-                    }
-                    else {
-                        return Err("Could not parse input".to_string());
-                    }
-                }
-                else if char_vec.len() == 3 {
-                    // Treat it as a promotion
-                    to_x_input = Some(self.get_coordinate_by_letter(char_vec[0])?);
-                    to_y_input = Some(self.get_coordinte_from_number(char_vec[1])?);
-                    piece_type = Some(self.get_piece_type_by_letter(char_vec[2])?);
-                    self.inside_board(to_x_input.unwrap(), to_y_input.unwrap())?;
-                    self.convert(to_x_input.unwrap(), to_y_input.unwrap(), piece_type.unwrap())?;
-                    return Ok(None);
-                }
-                else {
-                    return Err("Could not parse input".to_string());
-                }
-            }
-
-            let mut board_move: Option<BoardMove> = None;
-
-            for from_x in 0..8 {
-                for from_y in 0..8 {
-                    // If from position is speciefied, make sure it follows that
-                    if from_x_input.is_some() && from_x_input.unwrap() != from_x {
-                        continue;
-                    }
-                    if from_y_input.is_some() && from_y_input.unwrap() != from_y {
-                        continue;
-                    }
-                    // Iterate pieces and see if the piece can move there
-                    let from_piece = self.get_board_piece_clone(from_x, from_y);
-                    if from_piece.is_some() 
-                    && from_piece.unwrap().color == self.turn 
-                    && from_piece.unwrap().id == piece_type.unwrap() {
-                        // Make a copy of the board and try to move there
-                        let mut board_copy = self.clone();
-                        let test_move = BoardMove::new(from_x, from_y, to_x_input.unwrap(), to_y_input.unwrap());
-                        if board_copy.move_piece(test_move, true).is_ok() {
-                            // Make sure there are not multiple pieces that can do that move
-                            if board_move.is_some() {
-                                return Err("Unclear which piece is to move".to_string());
-                            }
-                            board_move = Some(test_move);
-                        }
-
-                    }
-                }
-            }
-            
-            if board_move.is_none() {
-                return Err("Could not do move".to_string());
-            }
-            self.move_piece(board_move.unwrap(), true)?;
-            return Ok(None)
-        }
-        pub fn get_piece_type_by_letter(&mut self, letter: char) -> Result<ChessPieceId, String> {
+        pub fn get_piece_type_from_letter(&mut self, letter: char) -> Result<ChessPieceId, String> {
             match letter {
                 'R' => return Ok(ChessPieceId::Rook),
                 'P' => return Ok(ChessPieceId::Pawn),
@@ -615,7 +593,7 @@ pub mod chess_game {
                 _ => return Err("No matching type".to_string())
             }
         }
-        pub fn get_coordinate_by_letter(&mut self, letter: char) -> Result<BoardPos, String> {
+        pub fn get_coordinate_from_letter(&mut self, letter: char) -> Result<BoardPos, String> {
             match letter {
                 'a' => return Ok(0),
                 'b' => return Ok(1),
@@ -628,6 +606,7 @@ pub mod chess_game {
                 _ => return Err("Could not parse coordinate letter".to_string())
             }
         }
+
         pub fn get_coordinte_from_number(&mut self, letter: char) -> Result<BoardPos, String> {
             let result: Result<BoardPos, ParseIntError> = letter.to_string().parse();
             if result.is_err() || result.clone().unwrap() == 0 {
@@ -635,6 +614,7 @@ pub mod chess_game {
             }
             return Ok(result.unwrap() - 1);
         }
+
         fn is_unblocked_straight_line(&mut self, board_move: BoardMove) -> Result<(), String> {
             // Make sure it is a straight line
             if board_move.from_x == board_move.to_x {
@@ -670,6 +650,11 @@ pub mod chess_game {
             }
             return Err("Not a valid straight line!".to_string());
         }
+
+        fn reset_move_count_left(&mut self) {
+            self.move_count_left = 100;
+        }
+
         fn is_unblocked_diagonal_line(&mut self, board_move: BoardMove) -> Result<(), String> {
             // Make sure it is a diagonal
             if (board_move.from_x as i32 - board_move.to_x as i32).abs()
@@ -707,6 +692,7 @@ pub mod chess_game {
             }
             return Ok(());
         }
+
         fn is_pieces_same_color(&mut self, x1: BoardPos, y1: BoardPos, x2: BoardPos, y2: BoardPos) -> bool {
             let piece1 = (*self.get_board_ref(x1, y1)).clone();
             let piece2 = (*self.get_board_ref(x2, y2)).clone();
@@ -717,6 +703,7 @@ pub mod chess_game {
                 return false;
             }
         }
+
         fn is_piece_id(&mut self, x: BoardPos, y: BoardPos, id: ChessPieceId) -> Result<(), String> {
             if self.get_board_ref(x, y).is_some() && self.get_board_ref(x, y).unwrap().id == id {
                 return Ok(());
@@ -749,15 +736,6 @@ pub mod chess_game {
             if self.get_board_ref(board_move.to_x, board_move.to_y).is_some() {
                 self.get_board_ref(board_move.to_x, board_move.to_y).as_mut().unwrap().moved = true;
             }
-            /*// Check for passant
-            if self.last_move_passant == true && self.last_move.is_some() {
-                if (board_move.to_x - self.last_move.unwrap().from_x) == 0 &&
-                    (board_move.to_y as i32 - self.last_move.unwrap().from_y as i32).abs() == 1 &&
-                    (board_move.to_y as i32 - self.last_move.unwrap().to_y as i32).abs() == 1 {
-                    *self.get_board_ref(self.last_move.unwrap().to_x, self.last_move.unwrap().to_y) =
-                        None;
-                }
-            }*/
             self.last_move_passant = false;
             self.last_move = Some(board_move);
         }

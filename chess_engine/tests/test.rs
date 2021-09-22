@@ -264,45 +264,45 @@ mod chess_lib_test {
         let mut game = Game::new();
         game.empty_board();
         game.set_pos(0, 0, ChessPieceId::Pawn, ChessPieceColor::White);
-        assert_eq!(game.convert(0, 0, ChessPieceId::Pawn).is_ok(), false);
+        assert_eq!(game.promote(0, 0, ChessPieceId::Pawn).is_ok(), false);
 
         // Make sure you cannot convert pawn to king
         let mut game = Game::new();
         game.empty_board();
         game.set_pos(0, 0, ChessPieceId::Pawn, ChessPieceColor::White);
-        assert_eq!(game.convert(0, 0, ChessPieceId::King).is_ok(), false);
+        assert_eq!(game.promote(0, 0, ChessPieceId::King).is_ok(), false);
 
         // Make sure white can convert pawn to queen
         let mut game = Game::new();
         game.empty_board();
         game.set_pos(0, 0, ChessPieceId::Pawn, ChessPieceColor::White);
-        assert_eq!(game.convert(0, 0, ChessPieceId::Queen).is_ok(), true);
+        assert_eq!(game.promote(0, 0, ChessPieceId::Queen).is_ok(), true);
 
         // Make sure white cannot convert pawn to queen on whites side of the board
         let mut game = Game::new();
         game.empty_board();
         game.set_pos(0, 7, ChessPieceId::Pawn, ChessPieceColor::White);
-        assert_eq!(game.convert(0, 7, ChessPieceId::Queen).is_ok(), false);
+        assert_eq!(game.promote(0, 7, ChessPieceId::Queen).is_ok(), false);
 
         // Make sure black can convert pawn to queen on whites side of the board
         let mut game = Game::new();
         game.empty_board();
         game.turn = ChessPieceColor::Black;
         game.set_pos(0, 7, ChessPieceId::Pawn, ChessPieceColor::Black);
-        assert_eq!(game.convert(0, 7, ChessPieceId::Queen).is_ok(), true);
+        assert_eq!(game.promote(0, 7, ChessPieceId::Queen).is_ok(), true);
 
         // Make sure black cannot convert pawn to queen on blacks side of the board
         let mut game = Game::new();
         game.empty_board();
         game.turn = ChessPieceColor::Black;
         game.set_pos(0, 0, ChessPieceId::Pawn, ChessPieceColor::Black);
-        assert_eq!(game.convert(0, 0, ChessPieceId::Queen).is_ok(), false);
+        assert_eq!(game.promote(0, 0, ChessPieceId::Queen).is_ok(), false);
 
         // Make sure black cannot convert pawn to queen when it is not blacks turn
         let mut game = Game::new();
         game.empty_board();
         game.set_pos(0, 7, ChessPieceId::Pawn, ChessPieceColor::Black);
-        assert_eq!(game.convert(0, 7, ChessPieceId::Queen).is_ok(), false);
+        assert_eq!(game.promote(0, 7, ChessPieceId::Queen).is_ok(), false);
     }
 
     #[test]

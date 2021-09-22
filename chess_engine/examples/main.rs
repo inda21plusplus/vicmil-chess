@@ -33,7 +33,7 @@ fn main() {
             let user_input: Vec<String> =
                 line.split_whitespace().map(|num| num.to_string()).collect();
             if user_input.len() == 1 {
-                let result = game.algebraic_move(user_input[0].clone());
+                let result = game.algebraic_notation_move(user_input[0].clone());
                 if result.is_ok() {
                     println!("Move Succesfull!");
                 } else {
@@ -49,10 +49,10 @@ fn main() {
                         println!("Invalid input");
                     }
                     let char_vec: Vec<char> = position.chars().collect();
-                    let result_letter = game.get_coordinate_by_letter(char_vec[0]);
+                    let result_letter = game.get_coordinate_from_letter(char_vec[0]);
                     let result_number = game.get_coordinte_from_number(char_vec[1]);
                     if result_letter.is_ok() && result_number.is_ok() {
-                        game.print_board_with_possible_moves(result_letter.unwrap(), result_number.unwrap());
+                        game.print_board_with_possible_moves(true, result_letter.unwrap(), result_number.unwrap());
                     }
                     else {
                         println!("Invalid input");
@@ -91,7 +91,7 @@ fn main() {
                     let from_x: Result<u32, ParseIntError> = user_input[1].parse();
                     let from_y: Result<u32, ParseIntError> = user_input[2].parse();
                     if from_x.is_ok() && from_y.is_ok() {
-                        game.print_board_with_possible_moves(from_x.unwrap() as u8, from_y.unwrap() as u8);
+                        game.print_board_with_possible_moves(true, from_x.unwrap() as u8, from_y.unwrap() as u8);
                     }
                 }
                 else {
@@ -102,7 +102,7 @@ fn main() {
                         println!();
                         println!();
                         let result =
-                            game.convert(from_x.unwrap() as u8, from_y.unwrap() as u8, to_id.unwrap());
+                            game.promote(from_x.unwrap() as u8, from_y.unwrap() as u8, to_id.unwrap());
                         if result.is_ok() {
                             println!("Move Succesfull!");
                         } else {
