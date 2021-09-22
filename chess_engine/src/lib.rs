@@ -136,7 +136,7 @@ pub mod chess_game {
         pub turn: ChessPieceColor,
         last_move: Option<BoardMove>,
         last_move_passant: bool,
-        move_count_left: u32, // To make sure player does not play more than 50 moves
+        move_count_left: i64, // To make sure player does not play more than 50 moves
     }
 
     #[allow(dead_code)]
@@ -381,7 +381,7 @@ pub mod chess_game {
 
         // Returns true if the game is over
         pub fn game_is_over(&mut self) -> bool {
-            if self.is_check_mate() || self.is_stale_mate() {
+            if self.is_check_mate() || self.is_stale_mate() || self.max_move_count_reached() {
                 return true;
             }
             return false;
@@ -499,7 +499,7 @@ pub mod chess_game {
             }
 
             // make sure move count limit is not reached
-            if self.move_count_left == 0 {
+            if self.max_move_count_reached() {
                 return Err("Maximum move count reached".to_string());
             }
 
@@ -653,6 +653,9 @@ pub mod chess_game {
 
         fn reset_move_count_left(&mut self) {
             self.move_count_left = 100;
+        }
+        fn max_move_count_reached(&mut self) -> bool {
+            return self.move_count_left < 1;
         }
 
         fn is_unblocked_diagonal_line(&mut self, board_move: BoardMove) -> Result<(), String> {
