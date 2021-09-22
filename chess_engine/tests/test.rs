@@ -341,4 +341,50 @@ mod chess_lib_test {
         assert_eq!(game.get_board_piece_clone(0, 0).is_some(), true);
         assert_eq!(game.get_board_piece_clone(3, 0).is_some(), true);
     }
+
+    #[test]
+    fn pessant_test() {
+        // Make sure you can do pessant
+        let mut game = Game::new();
+        game.turn = ChessPieceColor::Black;
+        game.empty_board();
+        game.set_pos(0, 1, ChessPieceId::Pawn, ChessPieceColor::Black);
+        game.set_pos(1, 3, ChessPieceId::Pawn, ChessPieceColor::White);
+        let board_move = BoardMove::new(0, 1, 0, 3);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), true);
+        let board_move = BoardMove::new(1, 3, 0, 2);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), true);
+        assert_eq!(game.get_board_piece_clone(0, 3).is_some(), false);
+        assert_eq!(game.get_board_piece_clone(1, 3).is_some(), false);
+        assert_eq!(game.get_board_piece_clone(0, 2).unwrap().id == ChessPieceId::Pawn, true);
+        assert_eq!(game.get_board_piece_clone(0, 2).unwrap().color == ChessPieceColor::White, true);
+
+        // Make sure you cannot do pessant backwards
+        let mut game = Game::new();
+        game.turn = ChessPieceColor::Black;
+        game.empty_board();
+        game.set_pos(0, 1, ChessPieceId::Pawn, ChessPieceColor::White);
+        game.set_pos(1, 3, ChessPieceId::Pawn, ChessPieceColor::Black);
+        let board_move = BoardMove::new(0, 1, 0, 3);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), false);
+        let board_move = BoardMove::new(1, 3, 0, 2);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), false);
+        assert_eq!(game.get_board_piece_clone(0, 1).is_some(), true);
+        assert_eq!(game.get_board_piece_clone(1, 3).is_some(), true);
+        assert_eq!(game.get_board_piece_clone(0, 2).is_some(), false);
+
+        // Make sure you cannot do pessant with other pieces
+        let mut game = Game::new();
+        game.turn = ChessPieceColor::Black;
+        game.empty_board();
+        game.set_pos(0, 1, ChessPieceId::Pawn, ChessPieceColor::Black);
+        game.set_pos(1, 3, ChessPieceId::Queen, ChessPieceColor::White);
+        let board_move = BoardMove::new(0, 1, 0, 3);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), true);
+        let board_move = BoardMove::new(1, 3, 0, 2);
+        assert_eq!(game.move_piece(board_move, false).is_ok(), true);
+        assert_eq!(game.get_board_piece_clone(0, 3).is_some(), true);
+        assert_eq!(game.get_board_piece_clone(0, 2).is_some(), true);
+        assert_eq!(game.get_board_piece_clone(1, 3).is_some(), false);
+    }
 }

@@ -302,6 +302,22 @@ pub mod chess_game {
             }
             return None;
         }
+        pub fn is_check_mate(&mut self) -> bool{
+            if self.is_check().is_some() && self.get_possible_moves().is_empty() {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        pub fn is_stale_mate(&mut self) -> bool{
+            if self.is_check().is_none() && self.get_possible_moves().is_empty() {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
         fn is_unblocked_straight_line(&mut self, board_move: BoardMove) -> Result<(), String> {
             // Make sure it is a straight line
             if board_move.from_x == board_move.to_x {
@@ -491,7 +507,7 @@ pub mod chess_game {
             if self.get_board_ref(board_move.to_x, board_move.to_y).is_some() {
                 self.get_board_ref(board_move.to_x, board_move.to_y).as_mut().unwrap().moved = true;
             }
-            // Check for passant
+            /*// Check for passant
             if self.last_move_passant == true && self.last_move.is_some() {
                 if (board_move.to_x - self.last_move.unwrap().from_x) == 0 &&
                     (board_move.to_y as i32 - self.last_move.unwrap().from_y as i32).abs() == 1 &&
@@ -499,7 +515,7 @@ pub mod chess_game {
                     *self.get_board_ref(self.last_move.unwrap().to_x, self.last_move.unwrap().to_y) =
                         None;
                 }
-            }
+            }*/
             self.last_move_passant = false;
             self.last_move = Some(board_move);
         }
@@ -640,11 +656,19 @@ pub mod chess_game {
                 return Err("Not moving one to the side".to_string());
             }
 
-            // Make sure there is a piece to take
-            if self
+            // Check for pessant
+            if self.last_move_passant == true 
+                && self.last_move.is_some() 
+                && (board_move.to_x - self.last_move.unwrap().from_x) == 0 
+                && (board_move.to_y as i32 - self.last_move.unwrap().from_y as i32).abs() == 1 
+                && (board_move.to_y as i32 - self.last_move.unwrap().to_y as i32).abs() == 1 {
+                // Remove last moved pawn due to pessant
+                *self.get_board_ref(self.last_move.unwrap().to_x, self.last_move.unwrap().to_y) =
+                None;
+            }
+            else if self
                 .get_board_ref(board_move.to_x, board_move.to_y)
-                .is_none()
-            {
+                .is_none() {
                 return Err("No piece to take".to_string());
             }
 
@@ -681,15 +705,15 @@ pub mod chess_game {
             self.board_move_not_same_color_pieces(board_move)?;
             let diagonal_result = self.is_unblocked_diagonal_line(board_move);
             let straight_result = self.is_unblocked_straight_line(board_move);
-            if diagonal_result.is_ok() || straight_result.is_ok() {
-                return Ok(());
-            } else {
+            if diagonal_result.is_err() && straight_result.is_err() {
                 let mut error_message: String = "Queen: ".to_string();
                 error_message += diagonal_result.err().unwrap().as_str();
                 error_message += ", ";
                 error_message += straight_result.err().unwrap().as_str();
                 return Err(error_message);
             }
+            self.force_move_piece(board_move);
+            return Ok(());
         }
 
         fn king_move_one(&mut self, board_move: BoardMove) -> Result<(), String> {
@@ -699,9 +723,9 @@ pub mod chess_game {
                 || (board_move.from_y as i32 - board_move.to_y as i32).abs() > 1
             {
                 return Err("King: cannot move that far!".to_string());
-            } else {
-                return Ok(());
             }
+            self.force_move_piece(board_move);
+            return Ok(());
         }
 
         fn king_castle(&mut self, board_move: BoardMove) -> Result<(), String> {
