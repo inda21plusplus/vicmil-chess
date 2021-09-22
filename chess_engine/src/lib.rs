@@ -529,10 +529,16 @@ pub mod chess_game {
                         let result_letter = self.get_coordinate_by_letter(char_vec[1]);
                         let result_number = self.get_coordinte_from_number(char_vec[2]);
                         if result_letter.is_ok() {
-                            to_x_input = Some(result_letter.unwrap());
+                            #[allow(unused_assignments)]
+                            {
+                                to_x_input = Some(result_letter.unwrap());
+                            }
                         }
                         else if result_number.is_ok() {
-                            to_y_input = Some(result_number.unwrap());
+                            #[allow(unused_assignments)]
+                            {
+                                to_y_input = Some(result_number.unwrap());
+                            }
                         }
                         to_x_input = Some(self.get_coordinate_by_letter(char_vec[2])?);
                         to_y_input = Some(self.get_coordinte_from_number(char_vec[3])?);
