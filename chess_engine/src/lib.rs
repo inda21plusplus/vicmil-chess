@@ -234,6 +234,43 @@ pub mod chess_game {
             }
             println!("  0 1 2 3 4 5 6 7");
         }
+        pub fn print_board_with_possible_moves(&mut self, from_x: BoardPos, from_y: BoardPos) {
+            println!("  0 1 2 3 4 5 6 7");
+            for y in 0..8 {
+                print!("{} ", y);
+                for x in 0..8 {
+                    let background_color;
+                    // Color square red if piece can move there
+                    let board_move = BoardMove::new(from_x, from_y, x, y);
+                    let mut board_copy = self.clone();
+                    if board_copy.move_piece(board_move, true).is_ok() {
+                        background_color = ColorTerminal::Red;
+                    }
+                    else if (x + y) % 2 == 1 {
+                        background_color = ColorTerminal::LightBlue;
+                    }
+                    else {
+                        background_color = ColorTerminal::Blue;
+                    }
+                    let board_ref = *self.get_board_ref(x, y);
+                    if board_ref.is_none() {
+                        print_color("  ", ColorTerminal::White, background_color);
+                    } else {
+                        if board_ref.as_ref().unwrap().color == ChessPieceColor::Black {
+                            print_color(board_ref.as_ref().unwrap().unicode_char.to_string().as_str(), ColorTerminal::Black, background_color);
+                            print_color(" ", ColorTerminal::Black, background_color);
+                        }
+                        else {
+                            print_color(board_ref.as_ref().unwrap().unicode_char.to_string().as_str(), ColorTerminal::White, background_color);
+                            print_color(" ", ColorTerminal::White, background_color);
+                        }
+                    }
+                }
+                print!("{} ", y);
+                println!();
+            }
+            println!("  0 1 2 3 4 5 6 7");
+        }
         pub fn get_board_ref(&mut self, x: BoardPos, y: BoardPos) -> &mut Option<ChessPiece> {
             return &mut self.board[(x + 8 * y) as usize];
         }
@@ -257,12 +294,10 @@ pub mod chess_game {
                     // If it is a king
                     if piece.is_some() && piece.unwrap().color == self.turn
                     {
-                        // Iterate spaces to see if it can move there
-                        let mut board_move = BoardMove::new(0, 0, x, y);
                         for x2 in 0..8 {
                             for y2 in 0..8 {
-                                board_move.from_x = x2;
-                                board_move.from_y = y2;
+                                // Iterate spaces to see if it can move there
+                                let board_move = BoardMove::new(x, y, x2, y2);
                                 let mut board_copy = self.clone();
                                 if board_copy.move_piece(board_move, true).is_ok() {
                                     board_moves.push_back(board_move);
@@ -274,6 +309,25 @@ pub mod chess_game {
             }
             return board_moves;
         }
+        pub fn game_is_over(&mut self) -> bool {
+            if self.is_check_mate() || self.is_stale_mate() {
+                return true;
+            }
+            return false;
+        }
+        pub fn get_winner(&mut self) -> Option<ChessPieceColor> {
+            if self.is_check_mate() {
+                if self.turn == ChessPieceColor::White {
+                    return Some(ChessPieceColor::Black);
+                }
+                else {
+                    return Some(ChessPieceColor::White);
+                }
+            }
+            else {
+                return None;
+            }
+        }
         pub fn is_check(&mut self) -> Option<BoardMove> {
             for x in 0..8 {
                 for y in 0..8 {
@@ -282,11 +336,9 @@ pub mod chess_game {
                     if piece.is_some() && piece.unwrap().id == ChessPieceId::King && piece.unwrap().color == self.turn
                     {
                         // Iterate pieces to see if any can capture the king
-                        let mut board_move = BoardMove::new(0, 0, x, y);
                         for x2 in 0..8 {
                             for y2 in 0..8 {
-                                board_move.from_x = x2;
-                                board_move.from_y = y2;
+                                let board_move = BoardMove::new(x2, y2, x, y);
                                 let mut board_copy = (*self).clone();
                                 board_copy.end_turn(); // Make it the opponents turn
 

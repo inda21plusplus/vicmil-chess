@@ -60,25 +60,35 @@ fn main() {
                     println!("Invalid input");
                 }
             } else if user_input.len() == 3 {
-                let from_x: Result<u32, ParseIntError> = user_input[0].parse();
-                let from_y: Result<u32, ParseIntError> = user_input[1].parse();
-                let to_id = ChessPieceId::from_str(&user_input[2].as_str());
-                if from_x.is_ok() && from_y.is_ok() && to_id.is_ok() {
-                    println!();
-                    println!();
-                    let result =
-                        game.convert(from_x.unwrap() as u8, from_y.unwrap() as u8, to_id.unwrap());
-                    if result.is_ok() {
-                        println!("Move Succesfull!");
-                    } else {
-                        println!("Invalid move!");
-                        let error_message = result.err().unwrap().clone();
-                        println!("{}", error_message);
+                if user_input[0] == "moves" {
+                    // Print possible moves for piece
+                    let from_x: Result<u32, ParseIntError> = user_input[1].parse();
+                    let from_y: Result<u32, ParseIntError> = user_input[2].parse();
+                    if from_x.is_ok() && from_y.is_ok() {
+                        game.print_board_with_possible_moves(from_x.unwrap() as u8, from_y.unwrap() as u8);
                     }
-                    print_game_info(&mut game);
-                } else {
-                    println!("Invalid input");
                 }
+                else {
+                    let from_x: Result<u32, ParseIntError> = user_input[0].parse();
+                    let from_y: Result<u32, ParseIntError> = user_input[1].parse();
+                    let to_id = ChessPieceId::from_str(&user_input[2].as_str());
+                    if from_x.is_ok() && from_y.is_ok() && to_id.is_ok() {
+                        println!();
+                        println!();
+                        let result =
+                            game.convert(from_x.unwrap() as u8, from_y.unwrap() as u8, to_id.unwrap());
+                        if result.is_ok() {
+                            println!("Move Succesfull!");
+                        } else {
+                            println!("Invalid move!");
+                            let error_message = result.err().unwrap().clone();
+                            println!("{}", error_message);
+                        }
+                    } else {
+                        println!("Invalid input");
+                    }
+                }
+                print_game_info(&mut game);
             } else {
                 println!("Invalid input");
             }

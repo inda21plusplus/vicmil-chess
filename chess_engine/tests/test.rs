@@ -387,4 +387,69 @@ mod chess_lib_test {
         assert_eq!(game.get_board_piece_clone(0, 2).is_some(), true);
         assert_eq!(game.get_board_piece_clone(1, 3).is_some(), false);
     }
+
+    #[test]
+    fn check_mate_test() {
+        // Make sure program can detect a check mate
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(0, 1, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(5, 0, ChessPieceId::King, ChessPieceColor::White);
+        assert_eq!(game.is_check().is_some(), true);
+        assert_eq!(game.get_possible_moves().is_empty(), true);
+        assert_eq!(game.is_check_mate(), true);
+
+        // make sure program does not give false check mates
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(0, 1, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(5, 1, ChessPieceId::King, ChessPieceColor::White);
+        assert_eq!(game.is_check().is_some(), true);
+        assert_eq!(game.get_possible_moves().is_empty(), false);
+        assert_eq!(game.is_check_mate(), false);
+
+        // Make sure it is not check mate when the game starts
+        let mut game = Game::new();
+        game.set_up_board();
+        assert_eq!(game.is_check_mate(), false);
+    }
+    #[test]
+    fn stale_mate_test() {
+        // Make sure a check mate is not a stale mate
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(0, 1, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(5, 0, ChessPieceId::King, ChessPieceColor::White);
+        assert_eq!(game.is_check().is_some(), true);
+        assert_eq!(game.get_possible_moves().is_empty(), true);
+        assert_eq!(game.is_stale_mate(), false);
+
+        // Make sure program does not give false stale mates
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(0, 1, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(5, 1, ChessPieceId::King, ChessPieceColor::White);
+        assert_eq!(game.is_check().is_some(), true);
+        assert_eq!(game.get_possible_moves().is_empty(), false);
+        assert_eq!(game.is_stale_mate(), false);
+
+        // Make sure a stale mate is a stale mate
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(0, 0, ChessPieceId::King, ChessPieceColor::White);
+        game.set_pos(1, 5, ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(5, 1, ChessPieceId::Rook, ChessPieceColor::Black);
+        assert_eq!(game.is_check().is_some(), false);
+        assert_eq!(game.get_possible_moves().is_empty(), true);
+        assert_eq!(game.is_stale_mate(), true);
+
+        // Make sure it is not stale mate when the game starts
+        let mut game = Game::new();
+        game.set_up_board();
+        assert_eq!(game.is_stale_mate(), false);
+    }
 }
