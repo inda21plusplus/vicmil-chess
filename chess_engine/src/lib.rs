@@ -157,8 +157,8 @@ pub mod chess_game {
             self.set_pos(0, 0, ChessPieceId::Rook, ChessPieceColor::Black);
             self.set_pos(1, 0, ChessPieceId::Knight, ChessPieceColor::Black);
             self.set_pos(2, 0, ChessPieceId::Bishop, ChessPieceColor::Black);
-            self.set_pos(3, 0, ChessPieceId::King, ChessPieceColor::Black);
-            self.set_pos(4, 0, ChessPieceId::Queen, ChessPieceColor::Black);
+            self.set_pos(3, 0, ChessPieceId::Queen, ChessPieceColor::Black);
+            self.set_pos(4, 0, ChessPieceId::King, ChessPieceColor::Black);
             self.set_pos(5, 0, ChessPieceId::Bishop, ChessPieceColor::Black);
             self.set_pos(6, 0, ChessPieceId::Knight, ChessPieceColor::Black);
             self.set_pos(7, 0, ChessPieceId::Rook, ChessPieceColor::Black);
@@ -169,8 +169,8 @@ pub mod chess_game {
             self.set_pos(0, 7, ChessPieceId::Rook, ChessPieceColor::White);
             self.set_pos(1, 7, ChessPieceId::Knight, ChessPieceColor::White);
             self.set_pos(2, 7, ChessPieceId::Bishop, ChessPieceColor::White);
-            self.set_pos(3, 7, ChessPieceId::King, ChessPieceColor::White);
-            self.set_pos(4, 7, ChessPieceId::Queen, ChessPieceColor::White);
+            self.set_pos(3, 7, ChessPieceId::Queen, ChessPieceColor::White);
+            self.set_pos(4, 7, ChessPieceId::King, ChessPieceColor::White);
             self.set_pos(5, 7, ChessPieceId::Bishop, ChessPieceColor::White);
             self.set_pos(6, 7, ChessPieceId::Knight, ChessPieceColor::White);
             self.set_pos(7, 7, ChessPieceId::Rook, ChessPieceColor::White);
@@ -310,7 +310,7 @@ pub mod chess_game {
         pub fn print_board_with_possible_moves(&mut self, print_possible_moves: bool, from_x: BoardPos, from_y: BoardPos) {
             println!("  a b c d e f g h");
             for y in 0..8 {
-                print!("{} ", y+1);
+                print!("{} ", 8-y);
                 for x in 0..8 {
                     let background_color;
                     let board_move = BoardMove::new(from_x, from_y, x, y);
@@ -322,7 +322,7 @@ pub mod chess_game {
                     else if print_possible_moves && from_x == x && from_y == y {
                         background_color = ColorTerminal::Green;
                     }
-                    else if (x + y) % 2 == 1 {
+                    else if (x + y) % 2 == 0 {
                         background_color = ColorTerminal::LightBlue;
                     }
                     else {
@@ -344,7 +344,7 @@ pub mod chess_game {
                         }
                     }
                 }
-                print!("{} ", y+1);
+                print!("{} ", 8-y);
                 println!();
             }
             println!("  a b c d e f g h");
@@ -612,7 +612,7 @@ pub mod chess_game {
             if result.is_err() || result.clone().unwrap() == 0 {
                 return Err("Could not parse coordinate number".to_string());
             }
-            return Ok(result.unwrap() - 1);
+            return Ok(8-result.unwrap());
         }
 
         fn is_unblocked_straight_line(&mut self, board_move: BoardMove) -> Result<(), String> {
