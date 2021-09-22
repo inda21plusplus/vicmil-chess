@@ -542,7 +542,6 @@ pub mod chess_game {
                     self.reset_move_count_left();
                 }
             }
-            self.move_count_left = self.move_count_left - 1;
             self.end_turn();
             return Ok(());
         }
@@ -728,6 +727,7 @@ pub mod chess_game {
             } else {
                 self.turn = ChessPieceColor::White;
             }
+            self.move_count_left = self.move_count_left - 1;
         }
 
         // Just moves the piece without any checking
