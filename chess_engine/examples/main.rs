@@ -74,6 +74,9 @@ fn main() {
                         println!("Invalid input");
                     }
                 }
+                else {
+                    println!("Invalid input");
+                }
             } else {
                 println!("Invalid input");
             }

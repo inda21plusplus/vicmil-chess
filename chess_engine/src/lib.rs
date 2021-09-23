@@ -1,6 +1,5 @@
 pub mod chess_game {
     use std::{collections::LinkedList};
-    use std::{num::ParseIntError};
 
     #[derive(Clone, Copy)]
     pub enum ColorTerminal {
@@ -57,12 +56,18 @@ pub mod chess_game {
             }
         }
 
-        pub fn get_coordinate_from_number(letter: char) -> Result<BoardPosType, String> {
-            let result: Result<BoardPosType, ParseIntError> = letter.to_string().parse();
-            if result.is_err() || result.clone().unwrap() == 0 {
-                return Err("Could not parse coordinate number".to_string());
+        pub fn get_coordinate_from_number(number: char) -> Result<BoardPosType, String> {
+            match number {
+                '1' => return Ok(7),
+                '2' => return Ok(6),
+                '3' => return Ok(5),
+                '4' => return Ok(4),
+                '5' => return Ok(3),
+                '6' => return Ok(2),
+                '7' => return Ok(1),
+                '8' => return Ok(0),
+                _ => return Err("Could not parse coordinate number".to_string())
             }
-            return Ok(8-result.unwrap());
         }
     }
 

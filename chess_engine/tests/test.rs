@@ -587,5 +587,25 @@ mod chess_lib_test {
         assert_eq!(game.get_board_piece_clone(from_pos1).is_some(), true);
         assert_eq!(game.get_board_piece_clone(from_pos2).is_some(), false);
 
+
+        // Make sure program does not crash with wierd input
+        let mut game = Game::new();
+        game.set_up_board();
+        assert_eq!(game.algebraic_notation_move("a9".to_string()).is_ok(), false);
+
+        // Make sure program does not crash with wierd input
+        let mut game = Game::new();
+        game.set_up_board();
+        assert_eq!(game.algebraic_notation_move("a0".to_string()).is_ok(), false);
+
+        // Make sure program does not crash with wierd input
+        let mut game = Game::new();
+        game.set_up_board();
+        assert_eq!(game.algebraic_notation_move("i1".to_string()).is_ok(), false);
+
+        // Make sure program does not crash with wierd input
+        let mut game = Game::new();
+        game.set_up_board();
+        assert_eq!(game.algebraic_notation_move("a2 a3".to_string()).is_ok(), false);
     }
 }
