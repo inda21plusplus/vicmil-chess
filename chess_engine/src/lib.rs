@@ -42,7 +42,7 @@ pub mod chess_game {
             let y = Self::get_coordinate_from_number(char_vec[1])?;
             return Ok(Self::new(x, y));
         }
-        
+
         pub fn get_coordinate_from_letter(letter: char) -> Result<BoardPosType, String> {
             match letter {
                 'a' => return Ok(0),
@@ -296,49 +296,10 @@ pub mod chess_game {
             else {
                 return Err("Could not parse move".to_string());
             }
-            /*else {
-                let result = self.get_piece_type_from_letter(char_vec[0]);
-                if result.is_ok() {
-                    piece_type = Some(result.unwrap());
-                    if char_vec.len() == 3 {
-                        to_x_input = Some(self.get_coordinate_from_letter(char_vec[1])?);
-                        to_y_input = Some(self.get_coordinate_from_number(char_vec[2])?);
-                    }
-                    else if char_vec.len() == 4 {
-                        let result_letter = self.get_coordinate_from_letter(char_vec[1]);
-                        let result_number = self.get_coordinate_from_number(char_vec[2]);
-                        if result_letter.is_ok() {
-                            #[allow(unused_assignments)]
-                            {
-                                to_x_input = Some(result_letter.unwrap());
-                            }
-                        }
-                        else if result_number.is_ok() {
-                            #[allow(unused_assignments)]
-                            {
-                                to_y_input = Some(result_number.unwrap());
-                            }
-                        }
-                        to_x_input = Some(self.get_coordinate_from_letter(char_vec[2])?);
-                        to_y_input = Some(self.get_coordinate_from_number(char_vec[3])?);
-                    }
-                    else if char_vec.len() == 5 {
-                        from_x_input = Some(self.get_coordinate_from_letter(char_vec[1])?);
-                        from_y_input = Some(self.get_coordinate_from_number(char_vec[2])?);
-                        to_x_input = Some(self.get_coordinate_from_letter(char_vec[3])?);
-                        to_y_input = Some(self.get_coordinate_from_number(char_vec[4])?);
-                    }
-                    else {
-                        return Err("Could not parse input".to_string());
-                    }
-                }
-                else {
-                    return Err("Could not parse input".to_string());
-                }
-            }*/
 
             let mut board_move: Option<BoardMove> = None;
 
+            // Try to move there, with the set limits
             for from_x in 0..8 {
                 for from_y in 0..8 {
                     // If from position is speciefied, make sure it follows that
