@@ -64,7 +64,7 @@ fn main() {
                     }
                     let char_vec: Vec<char> = position.chars().collect();
                     let result_letter = game.get_coordinate_from_letter(char_vec[0]);
-                    let result_number = game.get_coordinte_from_number(char_vec[1]);
+                    let result_number = game.get_coordinate_from_number(char_vec[1]);
                     if result_letter.is_ok() && result_number.is_ok() {
                         game.print_board_with_possible_moves(true, result_letter.unwrap(), result_number.unwrap());
                     }
