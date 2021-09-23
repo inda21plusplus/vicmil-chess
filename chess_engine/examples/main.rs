@@ -63,10 +63,11 @@ fn main() {
                         println!("Invalid input");
                     }
                     let char_vec: Vec<char> = position.chars().collect();
-                    let result_letter = game.get_coordinate_from_letter(char_vec[0]);
-                    let result_number = game.get_coordinate_from_number(char_vec[1]);
+                    let result_letter = chess_engine::chess_game::BoardPosition::get_coordinate_from_letter(char_vec[0]);
+                    let result_number = chess_engine::chess_game::BoardPosition::get_coordinate_from_number(char_vec[1]);
                     if result_letter.is_ok() && result_number.is_ok() {
-                        game.print_board_with_possible_moves(true, result_letter.unwrap(), result_number.unwrap());
+                        let pos = chess_engine::chess_game::BoardPosition::new(result_letter.unwrap(), result_number.unwrap());
+                        game.print_board_with_possible_moves(Some(pos));
                     }
                     else {
                         println!("Invalid input");
