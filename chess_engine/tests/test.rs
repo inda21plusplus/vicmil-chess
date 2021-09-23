@@ -384,6 +384,18 @@ mod chess_lib_test {
         assert_eq!(game.move_piece(board_move, true, None).is_ok(), false);
         assert_eq!(game.get_board_piece_clone(BoardPosition::new(7, 0)).is_some(), true);
         assert_eq!(game.get_board_piece_clone(BoardPosition::new(3, 0)).is_some(), true);
+
+        // Make sure you can castle when the rook is threatened
+        let mut game = Game::new();
+        game.empty_board();
+        game.set_pos(BoardPosition::new(7, 0), ChessPieceId::Rook, ChessPieceColor::White);
+        game.set_pos(BoardPosition::new(3, 0), ChessPieceId::King, ChessPieceColor::White);
+        game.set_pos(BoardPosition::new(7, 2), ChessPieceId::Rook, ChessPieceColor::Black);
+        game.set_pos(BoardPosition::new(6, 2), ChessPieceId::Rook, ChessPieceColor::Black);
+        let board_move = BoardMove::new(3, 0, 5, 0);
+        assert_eq!(game.move_piece(board_move, true, None).is_ok(), true);
+        assert_eq!(game.get_board_piece_clone(BoardPosition::new(7, 0)).is_some(), false);
+        assert_eq!(game.get_board_piece_clone(BoardPosition::new(3, 0)).is_some(), false);
     }
 
     #[test]

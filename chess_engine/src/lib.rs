@@ -299,32 +299,47 @@ pub mod chess_game {
 
             let mut board_move: Option<BoardMove> = None;
 
-            // Try to move there, with the set limits
-            for from_x in 0..8 {
-                for from_y in 0..8 {
-                    // If from position is speciefied, make sure it follows that
-                    if from_x_input.is_some() && from_x_input.unwrap() != from_x {
-                        continue;
-                    }
-                    if from_y_input.is_some() && from_y_input.unwrap() != from_y {
-                        continue;
-                    }
-                    // Iterate pieces and see if the piece can move there
-                    let from_piece = self.get_board_piece_clone(BoardPosition::new(from_x, from_y));
-                    if from_piece.is_some() 
-                    && from_piece.unwrap().color == self.turn 
-                    && from_piece.unwrap().id == piece_type.unwrap() {
-                        // Make a copy of the board and try to move there
-                        let mut board_copy = self.clone();
-                        let test_move = BoardMove::new(from_x, from_y, to_x_input.unwrap(), to_y_input.unwrap());
-                        if board_copy.move_piece(test_move, true, promote_piece).is_ok() {
-                            // Make sure there are not multiple pieces that can do that move
-                            if board_move.is_some() {
-                                return Err("Unclear which piece is to move".to_string());
-                            }
-                            board_move = Some(test_move);
-                        }
 
+            if from_x_input.is_some()
+            && from_y_input.is_some()
+            && to_x_input.is_some()
+            && to_y_input.is_some() {
+                // It is speciefied exactly which piece should move and where
+                board_move = Some(BoardMove::new(
+                    from_x_input.unwrap(), 
+                    from_y_input.unwrap(), 
+                    to_x_input.unwrap(), 
+                    to_y_input.unwrap()));
+            }
+            else {
+                // Find the moving piece
+                // Try to move there, with the limits set by the input
+                for from_x in 0..8 {
+                    for from_y in 0..8 {
+                        // If from position is speciefied, make sure it follows that
+                        if from_x_input.is_some() && from_x_input.unwrap() != from_x {
+                            continue;
+                        }
+                        if from_y_input.is_some() && from_y_input.unwrap() != from_y {
+                            continue;
+                        }
+                        // Iterate pieces and see if the piece can move there
+                        let from_piece = self.get_board_piece_clone(BoardPosition::new(from_x, from_y));
+                        if from_piece.is_some() 
+                        && from_piece.unwrap().color == self.turn 
+                        && from_piece.unwrap().id == piece_type.unwrap() {
+                            // Make a copy of the board and try to move there
+                            let mut board_copy = self.clone();
+                            let test_move = BoardMove::new(from_x, from_y, to_x_input.unwrap(), to_y_input.unwrap());
+                            if board_copy.move_piece(test_move, true, promote_piece).is_ok() {
+                                // Make sure there are not multiple pieces that can do that move
+                                if board_move.is_some() {
+                                    return Err("Unclear which piece is to move".to_string());
+                                }
+                                board_move = Some(test_move);
+                            }
+    
+                        }
                     }
                 }
             }
@@ -600,12 +615,14 @@ pub mod chess_game {
                         if result3.is_ok() {
                             break;
                         }
-                        return Err((result1.err().unwrap()
-                            + ", "
-                            + result2.err().unwrap().as_str()
-                            + ", "
-                            + result3.err().unwrap().as_str())
-                        .to_string());
+                        let mut error_message: String = "Moving pawn failed!\n one_forward: ".to_string();
+                        error_message += result1.err().unwrap().as_str();
+                        error_message += "\n two_forward: ";
+                        error_message += result2.err().unwrap().as_str();
+                        error_message += "\n take: ";
+                        error_message += result3.err().unwrap().as_str();
+                        error_message += "\n";
+                        return Err(error_message)
                     }
                     if promote {
                         self.get_board_ref(board_move.to_pos).unwrap().as_mut().unwrap().id = promote_piece.unwrap();
@@ -959,7 +976,7 @@ pub mod chess_game {
             || (board_move.from_pos.y as i32 - board_move.to_pos.y as i32).abs() != 2)
                 && ((board_move.from_pos.x as i32 - board_move.to_pos.x as i32).abs() != 2
                 || (board_move.from_pos.y as i32 - board_move.to_pos.y as i32).abs() != 1) {
-                return Err("Knight: invalid move".to_string());
+                return Err("invalid move".to_string());
             }
             self.force_move_piece(board_move);
             return Ok(());

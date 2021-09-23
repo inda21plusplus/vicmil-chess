@@ -30,7 +30,8 @@ fn print_game_info(game: &mut chess_engine::chess_game::Game) {
         println!("Check!");
     }
     println!();
-    println!("Algebraic notation, ex Na3 to move knight to a3.");
+    println!("Algebraic notation, ex Na3 to move knight to a3");
+    println!("Algebraic notation, specifying move exactly ex. Nb1b3 will show debug messages");
     println!("Or, print possible moves: ex 'moves a2' to print all moves for a2");
 }
 
