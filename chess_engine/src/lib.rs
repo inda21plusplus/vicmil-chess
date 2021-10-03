@@ -22,8 +22,8 @@ pub mod chess_game {
     type BoardPosType = u8;
     #[derive(Clone, Copy)]
     pub struct BoardPosition {
-        x: BoardPosType,
-        y: BoardPosType
+        pub x: BoardPosType,
+        pub y: BoardPosType
     }
     impl BoardPosition {
         pub fn new(x: BoardPosType, y: BoardPosType) -> Self {
@@ -179,8 +179,8 @@ pub mod chess_game {
     pub struct Game {
         board: [Option<ChessPiece>; 8 * 8],
         pub turn: ChessPieceColor,
-        last_move: Option<BoardMove>,
-        last_move_passant: bool,
+        pub last_move: Option<BoardMove>,
+        pub last_move_passant: bool,
         move_count_left: i64, // To make sure player does not play more than 50 moves
     }
 
@@ -222,6 +222,98 @@ pub mod chess_game {
             for x in 0..8 {
                 self.set_pos(BoardPosition::new(x, 6), ChessPieceId::Pawn, ChessPieceColor::White);
             }
+        }
+        pub fn can_white_castle_king_side(&mut self) -> bool {
+            match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
+                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
+                    let board_move = BoardMove::new(4, 0, 6, 0);
+                    let mut board_copy = self.clone();
+                    board_copy.turn = color;
+                    if board_copy.move_piece(board_move, true, None).is_err() {
+                        return false;
+                    }
+                }
+                _ => {return false}
+            }
+            return true;
+        }
+        pub fn can_white_castle_queen_side(&mut self) -> bool {
+            match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
+                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
+                    let board_move = BoardMove::new(4, 0, 2, 0);
+                    let mut board_copy = self.clone();
+                    board_copy.turn = color;
+                    if board_copy.move_piece(board_move, true, None).is_err() {
+                        return false;
+                    }
+                }
+                _ => {return false}
+            }
+            return true;
+        }
+        pub fn can_black_castle_king_side(&mut self) -> bool {
+            match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
+                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
+                    let board_move = BoardMove::new(4, 7, 6, 7);
+                    let mut board_copy = self.clone();
+                    board_copy.turn = color;
+                    if board_copy.move_piece(board_move, true, None).is_err() {
+                        return false;
+                    }
+                }
+                _ => {return false}
+            }
+            return true;
+        }
+        pub fn can_black_castle_queen_side(&mut self) -> bool {
+            match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
+                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
+                    let board_move = BoardMove::new(4, 7, 2, 7);
+                    let mut board_copy = self.clone();
+                    board_copy.turn = color;
+                    if board_copy.move_piece(board_move, true, None).is_err() {
+                        return false;
+                    }
+                }
+                _ => {return false}
+            }
+            return true;
+        }
+        pub fn make_unable_white_castle_king_side(&mut self) {
+            let board_ref = self.get_board_ref(BoardPosition::new(0, 0)).unwrap();
+            if board_ref.is_some() {
+                // Set it so that the castle has moved
+                board_ref.as_mut().unwrap().moved = true;
+            }
+        }
+        pub fn make_unable_white_castle_queen_side(&mut self) {
+            let board_ref = self.get_board_ref(BoardPosition::new(7, 0)).unwrap();
+            if board_ref.is_some() {
+                // Set it so that the castle has moved
+                board_ref.as_mut().unwrap().moved = true;
+            }
+        }
+        pub fn make_unable_black_castle_king_side(&mut self) {
+            let board_ref = self.get_board_ref(BoardPosition::new(0, 7)).unwrap();
+            if board_ref.is_some() {
+                // Set it so that the castle has moved
+                board_ref.as_mut().unwrap().moved = true;
+            }
+        }
+        pub fn make_unable_black_castle_queen_side(&mut self) {
+            let board_ref = self.get_board_ref(BoardPosition::new(7, 7)).unwrap();
+            if board_ref.is_some() {
+                // Set it so that the castle has moved
+                board_ref.as_mut().unwrap().moved = true;
+            }
+        }
+
+        pub fn set_up_board_from_fen(&mut self, fen: &str) -> Result<(), String> {
+            return Err("Not implemented yet".to_string());
+        }
+
+        pub fn get_fen_from_board() -> Result<String, String> {
+            return Err("Not implemented yet".to_string());
         }
 
         // Move a piece using algebraic notation
@@ -804,7 +896,7 @@ pub mod chess_game {
             self.move_count_left = self.move_count_left - 1;
         }
 
-        fn will_require_promotion(&mut self, board_move: BoardMove) -> bool {
+        pub fn will_require_promotion(&mut self, board_move: BoardMove) -> bool {
             let piece = self.get_board_piece_clone(board_move.from_pos);
             if piece.is_none() {
                 return false;

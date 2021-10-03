@@ -3,6 +3,14 @@ use ggez::graphics::{self, Color, Rect};
 use ggez::event::{self, EventHandler, MouseButton};
 use glam::*;
 use chess_engine::chess_game::*;
+use crate::server::*;
+use crate::client::*;
+use crate::parser::*;
+
+pub mod client;
+pub mod server;
+pub mod networking;
+pub mod parser;
 
 const SCREEN_WIDTH: f32 = 800.0;
 const SCREEN_HEIGHT: f32 = 800.0;
@@ -21,6 +29,13 @@ fn main() {
     // use when setting your game up.
     let mut my_game = MyGame::new(&mut ctx).unwrap();
     my_game.game.set_up_board();
+    /*let result = my_game.host_server(1337);
+    if result.is_ok() {
+        println!("succesfully set up server");
+    }
+    else {
+        println!("server setup failed: {}", result.err().unwrap());
+    }*/
 
     // Run!
     event::run(ctx, event_loop, my_game);
@@ -42,7 +57,9 @@ struct MyGame {
     black_square: graphics::Image,
     white_square: graphics::Image,
     mouse_button_press_down: Option<ggez::mint::Point2<f32>>,
-    game: chess_engine::chess_game::Game
+    game: chess_engine::chess_game::Game,
+    client: Option<Client>,
+    server: Option<Server>,
 }
 
 pub fn get_square_from_mouse_pos(pos: ggez::mint::Point2<f32>) -> Result<ggez::mint::Point2<u8>, String> {
@@ -92,9 +109,23 @@ impl MyGame {
             white_square,
             mouse_button_press_down: None,
             game,
+            client: None,
+            server: None
         };
 
         Ok(s)
+    }
+
+    pub fn host_server(&mut self, port: u16) -> Result<(), String> {
+        self.server = Some(Server::new(port)?);
+        let server_ip = "127.0.0.1:".to_string() + port.to_string().as_str();
+        let client = Client::new(server_ip.as_str());
+        if client.is_err() {
+            self.server = None;
+            self.client = None;
+        }
+        self.client = Some(client.unwrap());
+        return Ok(());
     }
 
     pub fn get_board_piece_image(&mut self, chess_piece: ChessPiece) -> Option<&graphics::Image> {
@@ -196,6 +227,19 @@ impl MyGame {
         }
         return Ok(());
     }
+
+    pub fn move_chess_piece(&mut self, board_move: BoardMove) {
+        if self.client.is_none() {
+            let move_result = self.game.move_piece(board_move, true, Some(ChessPieceId::Queen));
+            if move_result.is_err() {
+                println!("{}", "not a valid move");
+            }
+        }
+        else {
+            // Send a request to server to move piece
+            self.client.as_mut().unwrap().send_move_request(board_move, ChessPieceId::Queen);
+        }
+    }
 }
 
 pub fn get_mouse_position(ctx: &mut Context) -> ggez::mint::Point2<f32> {
@@ -217,6 +261,12 @@ pub fn draw_rectangle(ctx: &mut Context, rect: Rect, color: Color) -> GameResult
 
 impl EventHandler<ggez::GameError> for MyGame {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+        if self.client.is_some() {
+            self.client.as_mut().unwrap().update(&mut self.game);
+        }
+        if self.server.is_some() {
+            self.server.as_mut().unwrap().update();
+        }
         Ok(())
     }
 
@@ -255,10 +305,7 @@ impl EventHandler<ggez::GameError> for MyGame {
             mouse_up_board_pos.x, 
             mouse_up_board_pos.y);
 
-        let move_result = self.game.move_piece(board_move, true, Some(ChessPieceId::Queen));
-        if move_result.is_err() {
-            println!("{}", "not a valid move");
-        }
+        self.move_chess_piece(board_move);
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
