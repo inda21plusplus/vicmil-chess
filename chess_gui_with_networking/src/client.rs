@@ -1,7 +1,8 @@
 use std::net::{TcpStream};
 use chess_engine::chess_game::*;
 
-use crate::{networking::*};
+use crate::{parser::move_to_notation};
+use crate::networking;
 
 #[allow(dead_code)]
 enum ClientType {
@@ -41,7 +42,7 @@ impl Client {
     }
     pub fn read_from_server(&mut self, chess_game: &mut Game) {
         // Fetch server input
-        let result = read_tcp_stream_string(&mut self.server_connection, 1024);
+        let result = networking::read_tcp_stream_string(&mut self.server_connection, 1024);
         if result.is_ok() {
             // Parse the string
             let result = result.unwrap();
@@ -72,11 +73,19 @@ impl Client {
     }
     pub fn update(&mut self, chess_game: &mut Game) {
         self.read_from_server(chess_game);
-        let _ = write_to_tcp_stream_string(&mut self.server_connection, "hello world!");
-        // Send requests to server for moves
+        //let _ = networking::write_to_tcp_stream_string(&mut self.server_connection, "hello world!");
     }
-    pub fn send_move_request(&mut self, board_move: BoardMove, promote_piece: ChessPieceId) {
+    pub fn send_move_request(&mut self, board_move: BoardMove, promote_piece: Option<ChessPieceId>, chess_game: &mut Game) -> Result<(), String> {
         // Send a request to server to move piece
-
+        let move_notation: String;
+        if chess_game.will_require_promotion(board_move){
+            move_notation = move_to_notation(board_move, promote_piece)?;
+        }
+        else {
+            move_notation = move_to_notation(board_move, None)?;
+        }
+        let move_notation = "move:".to_string() + move_notation.as_str() + ";";
+        networking::write_to_tcp_stream_string(&mut self.server_connection, move_notation.as_str())?;
+        return Ok(());
     }
 }

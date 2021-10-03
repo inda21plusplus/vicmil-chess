@@ -249,3 +249,15 @@ pub fn get_fen_string(game: &mut Game) -> Result<String, String> {
 }
 
 
+pub fn move_to_notation(board_move: BoardMove, promote_piece: Option<ChessPieceId>) -> Result<String, String> {
+    let mut return_str = "".to_string();
+    return_str += board_move.to_notation()?.as_str();
+    if promote_piece.is_some() {
+        return_str += promote_piece.unwrap().to_letter().to_uppercase().to_string().as_str();
+    }
+    else {
+        return_str += '-'.to_string().as_str();
+    }
+    return Ok(return_str);
+}
+

@@ -1,3 +1,5 @@
+use chess_engine::chess_game::ChessPieceColor;
+
 use crate::networking::*;
 use std::net::{TcpListener, TcpStream};
 use std::collections::LinkedList;
@@ -74,13 +76,56 @@ impl Server {
         let _ = self.accept_incomming_connections();
         self.handle_client_request();
     }
+    pub fn parse_client_input(&mut self, input_string: String, client_color: Option<chess_engine::chess_game::ChessPieceColor>) {
+        // Parse the string
+        #[derive(Clone, Copy)]
+        enum RequestType {
+            Move,
+            None,
+        }
+        let mut request_type: RequestType = RequestType::None;
+        'outer: for line in input_string.split(";") {
+            let mut num = 0;
+            for arg in line.split(":") {
+                match num {
+                    0 => {
+                        if arg == "move" {
+                            request_type = RequestType::Move;
+                        }
+                        else {
+                            // if it is not board, it is not a valid input
+                            continue 'outer;
+                        }
+                    }
+                    1 => {
+                        if request_type as usize == RequestType::Move as usize 
+                            && Some(self.chess_game.turn) == client_color {
+                            let result = self.chess_game.algebraic_notation_move(arg.to_string());
+                            if result.is_ok() {
+                                self.send_new_board_state();
+                                println!("Server: Move succesfull");
+                            }
+                            else {
+                                println!("Server: Move failed, '{}' {}", arg, result.err().unwrap());
+                            }
+                        }
+                    }
+                    _ => {
+                    }
+                }
+                num = num + 1;
+            }
+        }
+    }
     pub fn handle_client_request(&mut self) {
         if self.white_player.is_some() {
             // handle white players requests
             //println!("read value");
             let read_value = read_tcp_stream_string(&mut self.white_player.as_mut().unwrap(), 1024);
             if read_value.is_ok() {
-                println!("{}", read_value.unwrap());
+                let read_value = read_value.unwrap();
+                println!("{}", read_value);
+                self.parse_client_input(read_value, Some(ChessPieceColor::White));
             }
         }
         if self.black_player.is_some() {

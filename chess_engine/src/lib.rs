@@ -42,6 +42,33 @@ pub mod chess_game {
             return Ok(Self::new(x, y));
         }
 
+        pub fn to_algebraic_notation(&self) -> Result<String, String> {
+            let mut return_str = "".to_string();
+            match self.x {
+                0 => return_str += "a",
+                1 => return_str += "b",
+                2 => return_str += "c",
+                3 => return_str += "d",
+                4 => return_str += "e",
+                5 => return_str += "f",
+                6 => return_str += "g",
+                7 => return_str += "h",
+                _ => return Err("x not in range".to_string())
+            }
+            match self.y {
+                0 => return_str += "8",
+                1 => return_str += "7",
+                2 => return_str += "6",
+                3 => return_str += "5",
+                4 => return_str += "4",
+                5 => return_str += "3",
+                6 => return_str += "2",
+                7 => return_str += "1",
+                _ => return Err("y not in range".to_string())
+            }
+            return Ok(return_str);
+        }
+
         pub fn get_coordinate_from_letter(letter: char) -> Result<BoardPosType, String> {
             match letter {
                 'a' => return Ok(0),
@@ -84,6 +111,12 @@ pub mod chess_game {
                 to_pos: BoardPosition::new(to_x, to_y),
             }
         }
+        pub fn to_notation(&self) -> Result<String, String> {
+            let mut return_string = "".to_string();
+            return_string += self.from_pos.to_algebraic_notation()?.as_str();
+            return_string += self.to_pos.to_algebraic_notation()?.as_str();
+            return Ok(return_string);
+        }
     }
 
     #[allow(dead_code)]
@@ -123,6 +156,17 @@ pub mod chess_game {
                 _ => {}
             }
             return Err(());
+        }
+
+        pub fn to_letter(&mut self) -> char {
+            match self {
+                Self::Pawn => return 'p',
+                Self::Knight => return 'n',
+                Self::Rook => return 'r',
+                Self::King => return 'k',
+                Self::Queen => return 'q',
+                Self::Bishop => return 'b',
+            }
         }
     }
 
@@ -324,7 +368,7 @@ pub mod chess_game {
             }
 
             // Remove unnecesary letters
-            let text = text.replace(&['(', ')', ',', '\"', '.', ';', 'X', 'x', ':', '='][..], "");
+            let text = text.replace(&['(', ')', ',', '\"', '.', ';', 'X', 'x', ':', '=', '-'][..], "");
 
             #[allow(unused_assignments)]
             let mut piece_type: Option<ChessPieceId> = None;

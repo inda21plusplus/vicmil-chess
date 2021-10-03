@@ -29,13 +29,13 @@ fn main() {
     // use when setting your game up.
     let mut my_game = MyGame::new(&mut ctx).unwrap();
     my_game.game.set_up_board();
-    /*let result = my_game.host_server(1337);
+    let result = my_game.host_server(1337);
     if result.is_ok() {
         println!("succesfully set up server");
     }
     else {
         println!("server setup failed: {}", result.err().unwrap());
-    }*/
+    }
 
     // Run!
     event::run(ctx, event_loop, my_game);
@@ -228,7 +228,7 @@ impl MyGame {
         return Ok(());
     }
 
-    pub fn move_chess_piece(&mut self, board_move: BoardMove) {
+    pub fn move_chess_piece(&mut self, board_move: BoardMove, ) {
         if self.client.is_none() {
             let move_result = self.game.move_piece(board_move, true, Some(ChessPieceId::Queen));
             if move_result.is_err() {
@@ -237,7 +237,7 @@ impl MyGame {
         }
         else {
             // Send a request to server to move piece
-            self.client.as_mut().unwrap().send_move_request(board_move, ChessPieceId::Queen);
+            let _ = self.client.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
         }
     }
 }
