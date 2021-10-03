@@ -98,15 +98,19 @@ impl Server {
                         }
                     }
                     1 => {
-                        if request_type as usize == RequestType::Move as usize 
-                            && Some(self.chess_game.turn) == client_color {
-                            let result = self.chess_game.algebraic_notation_move(arg.to_string());
-                            if result.is_ok() {
-                                self.send_new_board_state();
-                                println!("Server: Move succesfull");
+                        if request_type as usize == RequestType::Move as usize {
+                            if Some(self.chess_game.turn) == client_color {
+                                let result = self.chess_game.algebraic_notation_move(arg.to_string());
+                                if result.is_ok() {
+                                    self.send_new_board_state();
+                                    println!("Server: Move succesfull");
+                                }
+                                else {
+                                    println!("Server: Move failed, '{}' {}", arg, result.err().unwrap());
+                                }
                             }
                             else {
-                                println!("Server: Move failed, '{}' {}", arg, result.err().unwrap());
+                                println!("Server: Move failed, Wrong player color");
                             }
                         }
                     }
@@ -120,7 +124,6 @@ impl Server {
     pub fn handle_client_request(&mut self) {
         if self.white_player.is_some() {
             // handle white players requests
-            //println!("read value");
             let read_value = read_tcp_stream_string(&mut self.white_player.as_mut().unwrap(), 1024);
             if read_value.is_ok() {
                 let read_value = read_value.unwrap();
@@ -130,13 +133,33 @@ impl Server {
         }
         if self.black_player.is_some() {
             // handle black players requests
+            let read_value = read_tcp_stream_string(&mut self.black_player.as_mut().unwrap(), 1024);
+            if read_value.is_ok() {
+                let read_value = read_value.unwrap();
+                println!("{}", read_value);
+                self.parse_client_input(read_value, Some(ChessPieceColor::Black));
+            }
         }
         for _i in self.spectators.iter() {
             // Handle spectator requests
         }
     }
     pub fn send_new_board_state(&mut self) {
-        // Update the board state
         // Send out new board state to all clients
+        let fen_notation = crate::parser::get_fen_string(&mut self.chess_game);
+        if fen_notation.is_err() {
+            panic!("Conversion to fen notation failed!");
+        }
+        let send_msg = "board:".to_string() + fen_notation.unwrap().as_str() + ";";
+        if self.white_player.is_some() {
+            let _ = crate::networking::write_to_tcp_stream_string(self.white_player.as_mut().unwrap(), send_msg.as_str());
+        }
+        if self.black_player.is_some() {
+            let _ = crate::networking::write_to_tcp_stream_string(self.black_player.as_mut().unwrap(), send_msg.as_str());
+        }
+        for spectator in self.spectators.iter_mut() {
+            let _ = crate::networking::write_to_tcp_stream_string(spectator, send_msg.as_str());
+        }
     }
+
 }

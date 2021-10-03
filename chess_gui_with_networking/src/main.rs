@@ -29,7 +29,8 @@ fn main() {
     // use when setting your game up.
     let mut my_game = MyGame::new(&mut ctx).unwrap();
     my_game.game.set_up_board();
-    let result = my_game.host_server(1337);
+    //let result = my_game.host_server(1337);
+    let result = my_game.host_allow_spectators(1337);
     if result.is_ok() {
         println!("succesfully set up server");
     }
@@ -58,7 +59,8 @@ struct MyGame {
     white_square: graphics::Image,
     mouse_button_press_down: Option<ggez::mint::Point2<f32>>,
     game: chess_engine::chess_game::Game,
-    client: Option<Client>,
+    client1: Option<Client>,
+    client2: Option<Client>,
     server: Option<Server>,
 }
 
@@ -109,7 +111,8 @@ impl MyGame {
             white_square,
             mouse_button_press_down: None,
             game,
-            client: None,
+            client1: None,
+            client2: None,
             server: None
         };
 
@@ -122,9 +125,26 @@ impl MyGame {
         let client = Client::new(server_ip.as_str());
         if client.is_err() {
             self.server = None;
-            self.client = None;
+            self.client1 = None;
+            self.client2 = None;
         }
-        self.client = Some(client.unwrap());
+        self.client1 = Some(client.unwrap());
+        self.client2 = None;
+        return Ok(());
+    }
+
+    pub fn host_allow_spectators(&mut self, port: u16) -> Result<(), String> {
+        self.server = Some(Server::new(port)?);
+        let server_ip = "127.0.0.1:".to_string() + port.to_string().as_str();
+        let client1 = Client::new(server_ip.as_str());
+        let client2 = Client::new(server_ip.as_str());
+        if client1.is_err() || client2.is_err() {
+            self.server = None;
+            self.client1 = None;
+            self.client2 = None;
+        }
+        self.client1 = Some(client1.unwrap());
+        self.client2 = Some(client2.unwrap());
         return Ok(());
     }
 
@@ -229,7 +249,7 @@ impl MyGame {
     }
 
     pub fn move_chess_piece(&mut self, board_move: BoardMove, ) {
-        if self.client.is_none() {
+        if self.client1.is_none() {
             let move_result = self.game.move_piece(board_move, true, Some(ChessPieceId::Queen));
             if move_result.is_err() {
                 println!("{}", "not a valid move");
@@ -237,8 +257,13 @@ impl MyGame {
         }
         else {
             // Send a request to server to move piece
-            let _ = self.client.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
+            let _ = self.client1.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
+            if self.client2.is_some() {
+                // Try to move with the other client as well
+                let _ = self.client2.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
+            }
         }
+
     }
 }
 
@@ -261,8 +286,11 @@ pub fn draw_rectangle(ctx: &mut Context, rect: Rect, color: Color) -> GameResult
 
 impl EventHandler<ggez::GameError> for MyGame {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        if self.client.is_some() {
-            self.client.as_mut().unwrap().update(&mut self.game);
+        if self.client1.is_some() {
+            self.client1.as_mut().unwrap().update(&mut self.game);
+        }
+        if self.client2.is_some() {
+            self.client2.as_mut().unwrap().update(&mut self.game);
         }
         if self.server.is_some() {
             self.server.as_mut().unwrap().update();

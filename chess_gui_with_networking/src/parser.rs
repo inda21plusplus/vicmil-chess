@@ -5,7 +5,7 @@ pub const BOARD_SIZE: usize = 8;
 pub const BOARD_X_INPUT: [char; BOARD_SIZE] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 pub const BOARD_Y_INPUT: [char; BOARD_SIZE] = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-pub fn get_board(fen_string: String) -> Option<Game> {
+pub fn get_board(fen_string: String) -> Result<Game, String> {
     let split: Vec<String> = fen_string
         .split_whitespace()
         .map(|s| s.to_string())
@@ -13,7 +13,7 @@ pub fn get_board(fen_string: String) -> Option<Game> {
 
     // cant parse, invalid format
     if split.len() != 6 {
-        return None;
+        return Err("invalid format!".to_string());
     }
 
     // get board
@@ -32,7 +32,7 @@ pub fn get_board(fen_string: String) -> Option<Game> {
             break;
         }
 
-        let mut piece: Option<ChessPiece>;
+        let piece: Option<ChessPiece>;
         match char {
             'K' => piece = Some(ChessPiece::new(ChessPieceId::King, ChessPieceColor::White)),
             'Q' => piece = Some(ChessPiece::new(ChessPieceId::Queen, ChessPieceColor::White)),
@@ -55,7 +55,7 @@ pub fn get_board(fen_string: String) -> Option<Game> {
             let number: Option<u32> = char.to_digit(10);
             if number.is_none() {
                 // invalid input
-                return None;
+                return Err("invalid input!".to_string());
             }
             board_x += number.unwrap() as usize;
         } else {
@@ -135,13 +135,13 @@ pub fn get_board(fen_string: String) -> Option<Game> {
     let half_move_clock = split[4].parse::<u16>();
     if half_move_clock.is_err() {
         // invalid input
-        return None;
+        return Err("Half move clock gives error".to_string());
     }
 
     let full_move_clock = split[5].parse::<u16>();
     if full_move_clock.is_err() {
         // invalid input
-        return None;
+        return Err("Full move clock gives error".to_string());
     }
 
     /*let game = Game {
@@ -153,10 +153,26 @@ pub fn get_board(fen_string: String) -> Option<Game> {
         full_move_clock: full_move_clock.unwrap(),
     };*/
 
-    Some(board)
+    Ok(board)
 }
 
 pub fn get_fen_string(game: &mut Game) -> Result<String, String> {
+    let mut output = match get_board_fen_string(game) {
+        Ok(fen) => fen,
+        Err(e) => return Err(e),
+    };
+    output.push(' ');
+
+    //output += &game.half_move_clock.to_string();
+    output += "100";
+    output.push(' ');
+    output += "50";
+    //output += &game.full_move_clock.to_string();
+
+    Ok(output)
+}
+
+fn get_board_fen_string(game: &mut Game) -> Result<String, String> {
     let mut output: String = String::new();
     // generate board
     for y in 0..BOARD_SIZE {
@@ -244,8 +260,8 @@ pub fn get_fen_string(game: &mut Game) -> Result<String, String> {
         output.push('-');
     }
 
-    //return Some(output);
-    return Err("Not implemented yet".to_string());
+    return Ok(output);
+    //return Err("Not implemented yet".to_string());
 }
 
 

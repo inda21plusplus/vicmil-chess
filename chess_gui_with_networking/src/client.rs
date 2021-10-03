@@ -44,8 +44,10 @@ impl Client {
         // Fetch server input
         let result = networking::read_tcp_stream_string(&mut self.server_connection, 1024);
         if result.is_ok() {
-            // Parse the string
             let result = result.unwrap();
+            println!("Client: Recieved data from server!: '{}'", result);
+
+            // Parse the string
             'outer: for line in result.split(";") {
                 let mut num = 0;
                 for arg in line.split(":") {
@@ -60,8 +62,17 @@ impl Client {
                             }
                         }
                         1 => {
+                            println!("Client: setting board from fen notation!: '{}'", arg);
                             // Interprit it as a fen string and update board
-                            chess_game.set_up_board_from_fen(arg);
+                            //let result = chess_game.set_up_board_from_fen(arg);
+                            let result = crate::parser::get_board(arg.to_string());
+                            if result.is_err() {
+                                println!("Client: Failed to set up board: {}", result.err().unwrap());
+                            }
+                            else {
+                                *chess_game = result.unwrap();
+                                println!("Client: Board setup succesfull!");
+                            }
                         }
                         _ => {
                         }
@@ -76,6 +87,7 @@ impl Client {
         //let _ = networking::write_to_tcp_stream_string(&mut self.server_connection, "hello world!");
     }
     pub fn send_move_request(&mut self, board_move: BoardMove, promote_piece: Option<ChessPieceId>, chess_game: &mut Game) -> Result<(), String> {
+        println!("Client: sending move request!");
         // Send a request to server to move piece
         let move_notation: String;
         if chess_game.will_require_promotion(board_move){
