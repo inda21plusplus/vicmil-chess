@@ -1,5 +1,13 @@
+pub mod parser;
+pub use parser::fen_parser::*;
+
 pub mod chess_game {
     use std::{collections::LinkedList};
+    use crate::parser::fen_parser::{*, self};
+
+    pub fn move_to_notation(board_move: BoardMove, promote_piece: Option<ChessPieceId>) -> Result<String, String> {
+        fen_parser::move_to_notation(board_move, promote_piece)
+    }
 
     #[derive(Clone, Copy)]
     pub enum ColorTerminal {
@@ -20,7 +28,7 @@ pub mod chess_game {
     }
 
     type BoardPosType = u8;
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, PartialEq)]
     pub struct BoardPosition {
         pub x: BoardPosType,
         pub y: BoardPosType
@@ -98,7 +106,7 @@ pub mod chess_game {
         }
     }
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, PartialEq)]
     pub struct BoardMove {
         pub from_pos: BoardPosition,
         pub to_pos: BoardPosition
@@ -352,12 +360,13 @@ pub mod chess_game {
             }
         }
 
-        pub fn set_up_board_from_fen(&mut self, fen: &str) -> Result<(), String> {
-            return Err("Not implemented yet".to_string());
+        pub fn set_up_board_from_fen(&mut self, fen_string: String) -> Result<(), String> {
+            *self = crate::parser::fen_parser::get_board(fen_string)?;
+            return Ok(());
         }
 
-        pub fn get_fen_from_board() -> Result<String, String> {
-            return Err("Not implemented yet".to_string());
+        pub fn get_fen(&mut self) -> Result<String, String> {
+            return crate::parser::fen_parser::get_fen_string(self);
         }
 
         // Move a piece using algebraic notation
@@ -488,9 +497,10 @@ pub mod chess_game {
             if board_move.is_none() {
                 return Err("Could not do move".to_string());
             }
-            if !self.will_require_promotion(board_move.unwrap()) && promote_piece.is_some() {
+            // Give error if promote piece was specified but cannot promote
+            /*if !self.will_require_promotion(board_move.unwrap()) && promote_piece.is_some() {
                 return Err("Cannot promote piece".to_string());
-            }
+            }*/
             self.move_piece(board_move.unwrap(), true, promote_piece)?;
             return Ok(None)
         }
@@ -676,6 +686,22 @@ pub mod chess_game {
                 }
             }
             return board_moves;
+        }
+
+        pub fn get_moves_from_position(&mut self, pos: BoardPosition) -> Result<LinkedList<BoardMove>, String> {
+            self.inside_board(pos)?;
+            let mut return_list: LinkedList<BoardMove> = Default::default();
+            for x in 0..8 {
+                for y in 0..8 {
+                    // Iterate spaces to see if it can move there
+                    let board_move = BoardMove::new(pos.x, pos.y, x, y);
+                    let mut board_copy = self.clone();
+                    if board_copy.move_piece(board_move, true, Some(ChessPieceId::Queen)).is_ok() {
+                        return_list.push_back(board_move);
+                    }
+                }
+            }
+            return Ok(return_list);
         }
 
         pub fn move_piece(&mut self, board_move: BoardMove, check_for_check: bool, promote_piece: Option<ChessPieceId>) -> Result<(), String> {

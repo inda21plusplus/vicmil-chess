@@ -5,12 +5,10 @@ use glam::*;
 use chess_engine::chess_game::*;
 use crate::server::*;
 use crate::client::*;
-use crate::parser::*;
 
 pub mod client;
 pub mod server;
 pub mod networking;
-pub mod parser;
 
 const SCREEN_WIDTH: f32 = 800.0;
 const SCREEN_HEIGHT: f32 = 800.0;

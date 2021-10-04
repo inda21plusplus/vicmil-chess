@@ -554,12 +554,12 @@ mod chess_lib_test {
         assert_eq!(game.get_board_piece_clone(to_pos).is_some(), false);
         assert_eq!(game.get_board_piece_clone(from_pos).is_some(), true);
 
-        // Make sure you cannot specify a promote piece and not promote
+        // Make sure you can specify a promote piece and not promote
         let mut game = Game::new();
         game.set_up_board();
         let pos = BoardPosition::from_algebraic_notation("a3").unwrap();
-        assert_eq!(game.algebraic_notation_move("a3Q".to_string()).is_ok(), false);
-        assert_eq!(game.get_board_piece_clone(pos).is_some(), false);
+        assert_eq!(game.algebraic_notation_move("a3Q".to_string()).is_ok(), true);
+        assert_eq!(game.get_board_piece_clone(pos).is_some(), true);
 
         // Make sure you cannot move piece if it is unclear which piece should move
         let mut game = Game::new();
@@ -607,5 +607,96 @@ mod chess_lib_test {
         let mut game = Game::new();
         game.set_up_board();
         assert_eq!(game.algebraic_notation_move("a2 a3".to_string()).is_ok(), false);
+    }
+
+    fn same_board_setup(game1: &mut Game, game2: &mut Game) -> Result<(), String> {
+        // Match pieces
+        for x in 0..8 {
+            for y in 0..8 {
+                let piece1 = game1.get_board_piece_clone(BoardPosition::new(x, y));
+                let piece2 = game1.get_board_piece_clone(BoardPosition::new(x, y));
+                if piece1.is_some() != piece2.is_some() {
+                    return Err("Piece exists where other piece does not exist: ".to_string() + 
+                    BoardPosition::new(x, y).to_algebraic_notation().unwrap().as_str());
+                }
+                if piece1.is_none() {
+                    continue;
+                }
+                if piece1.unwrap().color != piece1.unwrap().color {
+                    return Err("Colors not matching: ".to_string() + 
+                    BoardPosition::new(x, y).to_algebraic_notation().unwrap().as_str());
+                }
+                if piece1.unwrap().id != piece1.unwrap().id {
+                    return Err("Ids not matching: ".to_string() + 
+                    BoardPosition::new(x, y).to_algebraic_notation().unwrap().as_str());
+                }
+            }
+        }
+
+        // Match pessant
+        if game1.last_move_passant != game2.last_move_passant {
+            return Err("Missmatched pessant".to_string());
+        }
+        if game1.last_move_passant && game2.last_move_passant && 
+            game1.last_move != game2.last_move {
+            return Err("Missmatched pessant".to_string());
+        }
+
+        // Match casteling
+        if game1.can_black_castle_king_side() != game2.can_black_castle_king_side() {
+            return Err("Missmatched casteling".to_string());
+        }
+        if game1.can_black_castle_queen_side() != game2.can_black_castle_queen_side() {
+            return Err("Missmatched casteling".to_string());
+        }
+        if game1.can_white_castle_king_side() != game2.can_white_castle_king_side() {
+            return Err("Missmatched casteling".to_string());
+        }
+        if game1.can_white_castle_queen_side() != game2.can_white_castle_queen_side() {
+            return Err("Missmatched casteling".to_string());
+        }
+
+        // Match moves left
+
+        return Ok(());
+    }
+
+    #[test]
+    fn fen_notation_test() {
+        // Test if basic board setup works
+        let mut game1 = Game::new();
+        game1.set_up_board();
+        let mut game2 = Game::new();
+        let result = game2.set_up_board_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string());
+        if result.is_err() {
+            panic!("Board setup failed!");
+        }
+
+        let result = same_board_setup(&mut game1, &mut game2);
+        if result.is_err() {
+            panic!("Board is not the same: {}", result.err().unwrap());
+        }
+
+        // Convert to fen and back to see if it is the same
+        let mut game1 = Game::new();
+        game1.set_up_board();
+        let result = game1.move_piece(BoardMove::new(0, 6, 0, 5), true, None);
+        if result.is_err() {
+            panic!("Board move failed: {}", result.err().unwrap());
+        }
+        let fen_notation = game1.get_fen();
+        if fen_notation.is_err() {
+            panic!("Fen notation conversion failed: {}", fen_notation.err().unwrap());
+        }
+        let mut game2 = Game::new();
+        let result = game2.set_up_board_from_fen(fen_notation.unwrap());
+        if result.is_err() {
+            panic!("Board setup failed!");
+        }
+
+        let result = same_board_setup(&mut game1, &mut game2);
+        if result.is_err() {
+            panic!("Board is not the same: {}", result.err().unwrap());
+        }
     }
 }

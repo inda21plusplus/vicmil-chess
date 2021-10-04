@@ -1,7 +1,6 @@
 use std::net::{TcpStream};
 use chess_engine::chess_game::*;
 
-use crate::{parser::move_to_notation};
 use crate::networking;
 
 #[allow(dead_code)]
@@ -65,12 +64,13 @@ impl Client {
                             println!("Client: setting board from fen notation!: '{}'", arg);
                             // Interprit it as a fen string and update board
                             //let result = chess_game.set_up_board_from_fen(arg);
-                            let result = crate::parser::get_board(arg.to_string());
+                            let mut new_game = Game::new();
+                            let result = new_game.set_up_board_from_fen(arg.to_string());
                             if result.is_err() {
                                 println!("Client: Failed to set up board: {}", result.err().unwrap());
                             }
                             else {
-                                *chess_game = result.unwrap();
+                                *chess_game = new_game;
                                 println!("Client: Board setup succesfull!");
                             }
                         }

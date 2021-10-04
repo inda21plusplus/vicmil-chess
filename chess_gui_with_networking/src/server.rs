@@ -146,7 +146,7 @@ impl Server {
     }
     pub fn send_new_board_state(&mut self) {
         // Send out new board state to all clients
-        let fen_notation = crate::parser::get_fen_string(&mut self.chess_game);
+        let fen_notation = self.chess_game.get_fen();
         if fen_notation.is_err() {
             panic!("Conversion to fen notation failed!");
         }
