@@ -635,11 +635,13 @@ mod chess_lib_test {
 
         // Match pessant
         if game1.last_move_passant != game2.last_move_passant {
-            return Err("Missmatched pessant".to_string());
+            return Err("Missmatched pessant, no pessant".to_string());
         }
         if game1.last_move_passant && game2.last_move_passant && 
             game1.last_move != game2.last_move {
-            return Err("Missmatched pessant".to_string());
+            return Err("Missmatched pessant, differing pessants: ".to_string() + 
+            move_to_notation(game1.last_move.unwrap(), None).unwrap().as_str() + 
+            move_to_notation(game2.last_move.unwrap(), None).unwrap().as_str());
         }
 
         // Match casteling
@@ -657,6 +659,11 @@ mod chess_lib_test {
         }
 
         // Match moves left
+
+        // Match whos turn it is
+        if game1.turn != game2.turn {
+            return Err("Missmatched turn".to_string());
+        }
 
         return Ok(());
     }
@@ -698,5 +705,54 @@ mod chess_lib_test {
         if result.is_err() {
             panic!("Board is not the same: {}", result.err().unwrap());
         }
+
+        // Convert to fen from pessant and back to see if it is the same
+        let mut game1 = Game::new();
+        game1.empty_board();
+        game1.set_pos(BoardPosition::new(0, 6), ChessPieceId::Pawn, ChessPieceColor::White);
+        let result = game1.move_piece(BoardMove::new(0, 6, 0, 4), true, None);
+        if result.is_err() {
+            panic!("Board move failed: {}", result.err().unwrap());
+        }
+        let fen_notation = game1.get_fen();
+        if fen_notation.is_err() {
+            panic!("Fen notation conversion failed: {}", fen_notation.err().unwrap());
+        }
+        let mut game2 = Game::new();
+        let result = game2.set_up_board_from_fen(fen_notation.unwrap());
+        if result.is_err() {
+            panic!("Board setup failed: {}", result.err().unwrap());
+        }
+        let result = same_board_setup(&mut game1, &mut game2);
+        if result.is_err() {
+            panic!("Board is not the same: {}", result.err().unwrap());
+        }
+        game2.turn = ChessPieceColor::White;
+        // Make sure player cannot move piece again
+        let result = game2.move_piece(BoardMove::new(0, 4, 0, 2), true, None);
+        assert_eq!(result.is_ok(), false);
+
+
+
+        // Make sure casteling works correctly
+        let mut game1 = Game::new();
+        game1.empty_board();
+        game1.set_pos(BoardPosition::new(0, 0), ChessPieceId::Rook, ChessPieceColor::Black);
+        game1.set_pos(BoardPosition::new(4, 0), ChessPieceId::King, ChessPieceColor::Black);
+        game1.set_pos(BoardPosition::new(7, 0), ChessPieceId::Rook, ChessPieceColor::Black);
+        game1.set_pos(BoardPosition::new(0, 7), ChessPieceId::Rook, ChessPieceColor::White);
+        game1.set_pos(BoardPosition::new(4, 7), ChessPieceId::King, ChessPieceColor::White);
+        game1.set_pos(BoardPosition::new(7, 7), ChessPieceId::Rook, ChessPieceColor::White);
+        game1.get_board_ref(BoardPosition::new(0, 7)).as_mut().unwrap().as_mut().unwrap().moved = true;
+        assert_eq!(game1.can_white_castle_queen_side(), false);
+        assert_eq!(game1.can_white_castle_king_side(), true);
+        let fen_notation = game1.get_fen();
+        if fen_notation.is_err() {
+            panic!("Fen notation conversion failed: {}", fen_notation.err().unwrap());
+        }
+        let mut game2 = Game::new();
+        game2.set_up_board_from_fen(fen_notation.unwrap()).unwrap();
+        assert_eq!(game2.can_white_castle_queen_side(), false);
+        assert_eq!(game2.can_white_castle_king_side(), true);
     }
 }

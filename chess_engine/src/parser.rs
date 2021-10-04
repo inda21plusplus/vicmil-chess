@@ -50,7 +50,6 @@ pub mod fen_parser {
                 'r' => piece = Some(ChessPiece::new(ChessPieceId::Rook, ChessPieceColor::Black)),
                 _ => piece = None,
             }
-            //let piece = parse_piece(char);
 
             if piece.is_none() {
                 // is number
@@ -63,6 +62,15 @@ pub mod fen_parser {
             } else {
                 let piece = piece.unwrap();
                 board.set_pos(BoardPosition::new(board_x as u8, board_y as u8), piece.id, piece.color);
+                if board_y > 1 && board_y < 6 {
+                    // Set pieces in the middle to moved, to avoid double pessant
+                    board.get_board_ref(BoardPosition::new(board_x as u8, board_y as u8))
+                    .as_mut()
+                    .unwrap()
+                    .as_mut()
+                    .unwrap()
+                    .moved = true;
+                }
                 //board[board_x][board_y] = piece.unwrap();
                 board_x += 1;
             }
@@ -119,10 +127,19 @@ pub mod fen_parser {
         let en_passant_position = BoardPosition::from_algebraic_notation(&split[3]);
         if en_passant_position.is_ok() {
             board.last_move_passant = true;
-            board.last_move = Some(BoardMove::new(0, 0, 
+            let from_pos: BoardPosition;
+            if board.turn == ChessPieceColor::White {
+                // Last move was black
+                from_pos = BoardPosition::new(en_passant_position.as_ref().unwrap().x, 1);
+            }
+            else {
+                // Last move was white
+                from_pos = BoardPosition::new(en_passant_position.as_ref().unwrap().x, 6);
+            }
+            board.last_move = Some(BoardMove::new(from_pos.x, from_pos.y, 
                 en_passant_position.as_ref().unwrap().x, 
-            en_passant_position.unwrap().y));
-            return Err("En pessant not fully implemented yet!".to_string());
+            en_passant_position.as_ref().unwrap().y));
+            //return Err("En pessant not fully implemented yet!".to_string());
         }
 
         let half_move_clock = split[4].parse::<u16>();
@@ -239,7 +256,7 @@ pub mod fen_parser {
         if game.last_move_passant {
             let en_passant_position = game.last_move.unwrap();
             output.push(BOARD_X_INPUT[en_passant_position.to_pos.x as usize]);
-            output.push(BOARD_Y_INPUT[en_passant_position.to_pos.x as usize]);
+            output.push(BOARD_Y_INPUT[en_passant_position.to_pos.y as usize]);
         } else {
             output.push('-');
         }

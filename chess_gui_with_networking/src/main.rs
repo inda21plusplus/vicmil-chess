@@ -55,6 +55,7 @@ struct MyGame {
     white_king: graphics::Image,
     black_square: graphics::Image,
     white_square: graphics::Image,
+    red_square: graphics::Image,
     mouse_button_press_down: Option<ggez::mint::Point2<f32>>,
     game: chess_engine::chess_game::Game,
     client1: Option<Client>,
@@ -89,6 +90,7 @@ impl MyGame {
         let white_king = graphics::Image::new(ctx, "/Chess_klt60.png")?;
         let black_square = graphics::Image::new(ctx, "/black_square.png")?;
         let white_square = graphics::Image::new(ctx, "/white_square.png")?;
+        let red_square = graphics::Image::new(ctx, "/red_square.png")?;
 
         let game = chess_engine::chess_game::Game::new();
 
@@ -107,6 +109,7 @@ impl MyGame {
             white_king,
             black_square,
             white_square,
+            red_square,
             mouse_button_press_down: None,
             game,
             client1: None,
@@ -117,6 +120,7 @@ impl MyGame {
         Ok(s)
     }
 
+    #[allow(dead_code)]
     pub fn host_server(&mut self, port: u16) -> Result<(), String> {
         self.server = Some(Server::new(port)?);
         let server_ip = "127.0.0.1:".to_string() + port.to_string().as_str();
@@ -186,7 +190,24 @@ impl MyGame {
                     let size = image.dimensions().h * scale.x;
                     let dst = glam::Vec2::new(size*x as f32, size*y as f32);
 
-                    if (x + y) % 2 == 0 {
+                    // Color square red if player can move there
+                    let mut board_copy = self.game.clone();
+                    if grabbed_piece_pos.is_some() 
+                        && board_copy.move_piece(BoardMove::new(grabbed_piece_pos.as_mut().unwrap().x, 
+                        grabbed_piece_pos.as_mut().unwrap().y, 
+                        x, 
+                        y), 
+                        true, Some(ChessPieceId::Queen)).is_ok() {
+                            let image = &self.black_square;
+                            let scale_factor = (SCREEN_WIDTH) / (image.dimensions().h*8.0);
+                            let scale = glam::Vec2::new(scale_factor, scale_factor);
+                            let size = image.dimensions().h * scale.x;
+                            let dst = glam::Vec2::new(size*x as f32, size*y as f32);
+                            graphics::draw(ctx, &self.red_square, graphics::DrawParam::new()
+                            .dest(dst)
+                            .scale(scale),)?;
+                        }
+                    else if (x + y) % 2 == 0 {
                         graphics::draw(ctx, &self.black_square, graphics::DrawParam::new()
                         .dest(dst)
                         .scale(scale),)?;

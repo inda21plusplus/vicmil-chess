@@ -3,7 +3,7 @@ pub use parser::fen_parser::*;
 
 pub mod chess_game {
     use std::{collections::LinkedList};
-    use crate::parser::fen_parser::{*, self};
+    use crate::parser::fen_parser::{self};
 
     pub fn move_to_notation(board_move: BoardMove, promote_piece: Option<ChessPieceId>) -> Result<String, String> {
         fen_parser::move_to_notation(board_move, promote_piece)
@@ -276,28 +276,26 @@ pub mod chess_game {
             }
         }
         pub fn can_white_castle_king_side(&mut self) -> bool {
-            match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
-                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
-                    let board_move = BoardMove::new(4, 0, 6, 0);
-                    let mut board_copy = self.clone();
-                    board_copy.turn = color;
-                    if board_copy.move_piece(board_move, true, None).is_err() {
-                        return false;
-                    }
+            match self.get_board_piece_clone(BoardPosition::new(4, 7)) {
+                Some(ChessPiece{id: ChessPieceId::King, moved: false, ..}) => {
+                }
+                _ => {return false}
+            }
+            match self.get_board_piece_clone(BoardPosition::new(7, 7)) {
+                Some(ChessPiece{id: ChessPieceId::Rook, moved: false, ..}) => {
                 }
                 _ => {return false}
             }
             return true;
         }
         pub fn can_white_castle_queen_side(&mut self) -> bool {
-            match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
-                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
-                    let board_move = BoardMove::new(4, 0, 2, 0);
-                    let mut board_copy = self.clone();
-                    board_copy.turn = color;
-                    if board_copy.move_piece(board_move, true, None).is_err() {
-                        return false;
-                    }
+            match self.get_board_piece_clone(BoardPosition::new(4, 7)) {
+                Some(ChessPiece{id: ChessPieceId::King, moved: false, ..}) => {
+                }
+                _ => {return false}
+            }
+            match self.get_board_piece_clone(BoardPosition::new(0, 7)) {
+                Some(ChessPiece{id: ChessPieceId::Rook, moved: false, ..}) => {
                 }
                 _ => {return false}
             }
@@ -305,13 +303,12 @@ pub mod chess_game {
         }
         pub fn can_black_castle_king_side(&mut self) -> bool {
             match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
-                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
-                    let board_move = BoardMove::new(4, 7, 6, 7);
-                    let mut board_copy = self.clone();
-                    board_copy.turn = color;
-                    if board_copy.move_piece(board_move, true, None).is_err() {
-                        return false;
-                    }
+                Some(ChessPiece{id: ChessPieceId::King, moved: false, ..}) => {
+                }
+                _ => {return false}
+            }
+            match self.get_board_piece_clone(BoardPosition::new(7, 0)) {
+                Some(ChessPiece{id: ChessPieceId::Rook, moved: false, ..}) => {
                 }
                 _ => {return false}
             }
@@ -319,41 +316,40 @@ pub mod chess_game {
         }
         pub fn can_black_castle_queen_side(&mut self) -> bool {
             match self.get_board_piece_clone(BoardPosition::new(4, 0)) {
-                Some(ChessPiece{id: ChessPieceId::King, color, ..}) => {
-                    let board_move = BoardMove::new(4, 7, 2, 7);
-                    let mut board_copy = self.clone();
-                    board_copy.turn = color;
-                    if board_copy.move_piece(board_move, true, None).is_err() {
-                        return false;
-                    }
+                Some(ChessPiece{id: ChessPieceId::King, moved: false, ..}) => {
+                }
+                _ => {return false}
+            }
+            match self.get_board_piece_clone(BoardPosition::new(0, 0)) {
+                Some(ChessPiece{id: ChessPieceId::Rook, moved: false, ..}) => {
                 }
                 _ => {return false}
             }
             return true;
         }
         pub fn make_unable_white_castle_king_side(&mut self) {
-            let board_ref = self.get_board_ref(BoardPosition::new(0, 0)).unwrap();
+            let board_ref = self.get_board_ref(BoardPosition::new(7, 7)).unwrap();
             if board_ref.is_some() {
                 // Set it so that the castle has moved
                 board_ref.as_mut().unwrap().moved = true;
             }
         }
         pub fn make_unable_white_castle_queen_side(&mut self) {
-            let board_ref = self.get_board_ref(BoardPosition::new(7, 0)).unwrap();
-            if board_ref.is_some() {
-                // Set it so that the castle has moved
-                board_ref.as_mut().unwrap().moved = true;
-            }
-        }
-        pub fn make_unable_black_castle_king_side(&mut self) {
             let board_ref = self.get_board_ref(BoardPosition::new(0, 7)).unwrap();
             if board_ref.is_some() {
                 // Set it so that the castle has moved
                 board_ref.as_mut().unwrap().moved = true;
             }
         }
+        pub fn make_unable_black_castle_king_side(&mut self) {
+            let board_ref = self.get_board_ref(BoardPosition::new(7, 0)).unwrap();
+            if board_ref.is_some() {
+                // Set it so that the castle has moved
+                board_ref.as_mut().unwrap().moved = true;
+            }
+        }
         pub fn make_unable_black_castle_queen_side(&mut self) {
-            let board_ref = self.get_board_ref(BoardPosition::new(7, 7)).unwrap();
+            let board_ref = self.get_board_ref(BoardPosition::new(0, 0)).unwrap();
             if board_ref.is_some() {
                 // Set it so that the castle has moved
                 board_ref.as_mut().unwrap().moved = true;
