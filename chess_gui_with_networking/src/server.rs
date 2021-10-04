@@ -13,17 +13,20 @@ pub struct Server {
     chess_game: chess_engine::chess_game::Game,
     listening_port: u16,
     port_listener: Option<Box<TcpListener>>,
+    server_ip: String,
 }
 
 impl Server {
     pub fn new(listening_port: u16) -> Result<Self, String> {
+        //let listening_port_ip = get_local_ip().unwrap() + listening_port.to_string().as_str();
         let listening_port_ip = "127.0.0.1:".to_string() + listening_port.to_string().as_str();
         let port_listener = TcpListener::bind(listening_port_ip.as_str());
         if port_listener.is_err() {
             return Err("Could not bind listening port".to_string());
         }
         //port_listener.as_mut().unwrap().set_nonblocking(true).expect("Cannot set non-blocking");
-        println!("server listening on ip: {}:{}", get_local_ip().unwrap(), listening_port);
+        //println!("server listening on ip: {}:{}", get_local_ip().unwrap(), listening_port);
+        println!("server listening on ip: {}", listening_port_ip);
         let mut chess_game = chess_engine::chess_game::Game::new();
         chess_game.set_up_board();
         Ok(Self {
@@ -33,6 +36,7 @@ impl Server {
             chess_game,
             listening_port,
             port_listener: Some(Box::new(port_listener.unwrap())),
+            server_ip: listening_port_ip,
         })
     }
     fn handle_client(&mut self, stream: TcpStream) {

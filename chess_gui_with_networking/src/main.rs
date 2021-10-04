@@ -1,3 +1,5 @@
+use std::io::{self, BufRead};
+
 use ggez::{Context, ContextBuilder, GameResult};
 use ggez::graphics::{self, Color, Rect};
 use ggez::event::{self, EventHandler, MouseButton};
@@ -27,14 +29,62 @@ fn main() {
     // use when setting your game up.
     let mut my_game = MyGame::new(&mut ctx).unwrap();
     my_game.game.set_up_board();
-    //let result = my_game.host_server(1337);
-    let result = my_game.host_allow_spectators(1337);
-    if result.is_ok() {
-        println!("succesfully set up server");
+    
+
+    println!("game setup type: 'local', 'broadcast', 'host', 'join <IP_string>'");
+    let stdin = io::stdin();
+    for line in stdin.lock().lines().map(|l| l.unwrap()) {
+        let user_input: Vec<String> =
+            line.split_whitespace().map(|num| num.to_string()).collect();
+        match user_input[0].as_str() {
+            "local" => {
+                let result = my_game.stop_hosting();
+                if result.is_ok() {
+                    println!("succesfully set up local game");
+                    break;
+                }
+                else {
+                    println!("local game setup failed: {}", result.err().unwrap());
+                }
+            },
+            "host" => {
+                let result = my_game.host_server(1337);
+                if result.is_ok() {
+                    println!("succesfully set up server");
+                    break;
+                }
+                else {
+                    println!("server setup failed: {}", result.err().unwrap());
+                }
+            },
+            "join" => {
+                if user_input.len() > 1 {
+                    let server_ip = user_input[1].clone();
+                    let result = my_game.connect_to_server(server_ip);
+                    if result.is_ok() {
+                        println!("succesfully connected to server");
+                        break;
+                    }
+                    else {
+                        println!("connection to server failed: {}", result.err().unwrap());
+                    }
+                }
+                
+            },
+            "broadcast" => {
+                let result = my_game.stop_hosting();
+                if result.is_ok() {
+                    println!("succesfully set up broadcast server");
+                    break;
+                }
+                else {
+                    println!("server setup failed: {}", result.err().unwrap());
+                }
+            },
+            _ => {}
+        }
     }
-    else {
-        println!("server setup failed: {}", result.err().unwrap());
-    }
+    
 
     // Run!
     event::run(ctx, event_loop, my_game);
@@ -120,6 +170,7 @@ impl MyGame {
         Ok(s)
     }
 
+
     #[allow(dead_code)]
     pub fn host_server(&mut self, port: u16) -> Result<(), String> {
         self.server = Some(Server::new(port)?);
@@ -135,6 +186,22 @@ impl MyGame {
         return Ok(());
     }
 
+    #[allow(dead_code)]
+    pub fn connect_to_server(&mut self, server_ip: String) -> Result<(), String> {
+        let client = Client::new(server_ip.as_str());
+        if client.is_err() {
+            self.server = None;
+            self.client1 = None;
+            self.client2 = None;
+            return Err("Could not connect to server!".to_string());
+        }
+        self.server = None;
+        self.client1 = Some(client.unwrap());
+        self.client2 = None;
+        return Ok(());
+    }
+
+    #[allow(dead_code)]
     pub fn host_allow_spectators(&mut self, port: u16) -> Result<(), String> {
         self.server = Some(Server::new(port)?);
         let server_ip = "127.0.0.1:".to_string() + port.to_string().as_str();
@@ -147,6 +214,14 @@ impl MyGame {
         }
         self.client1 = Some(client1.unwrap());
         self.client2 = Some(client2.unwrap());
+        return Ok(());
+    }
+
+    #[allow(dead_code)]
+    pub fn stop_hosting(&mut self) -> Result<(), String> {
+        self.server = None;
+        self.client1 = None;
+        self.client2 = None;
         return Ok(());
     }
 
