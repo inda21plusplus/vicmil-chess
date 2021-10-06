@@ -48,7 +48,17 @@ fn main() {
                 }
             },
             "host" => {
-                let result = my_game.host_server(1337);
+                let result = my_game.host_server(1337, false);
+                if result.is_ok() {
+                    println!("succesfully set up server");
+                    break;
+                }
+                else {
+                    println!("server setup failed: {}", result.err().unwrap());
+                }
+            },
+            "local_host" => {
+                let result = my_game.host_server(1337, true);
                 if result.is_ok() {
                     println!("succesfully set up server");
                     break;
@@ -174,8 +184,8 @@ impl MyGame {
 
 
     #[allow(dead_code)]
-    pub fn host_server(&mut self, port: u16) -> Result<(), String> {
-        self.server = Some(Server::new(port)?);
+    pub fn host_server(&mut self, port: u16, local: bool) -> Result<(), String> {
+        self.server = Some(Server::new(port, local)?);
         let server_ip: String = self.server.as_mut().unwrap().server_ip.clone();
         let client = Client::new(server_ip.as_str(), ChessPieceColor::White);
         if client.is_err() {
@@ -205,7 +215,7 @@ impl MyGame {
 
     #[allow(dead_code)]
     pub fn host_allow_spectators(&mut self, port: u16) -> Result<(), String> {
-        self.server = Some(Server::new(port)?);
+        self.server = Some(Server::new(port, false)?);
         let server_ip = self.server.as_mut().unwrap().server_ip.clone();
         let client1 = Client::new(server_ip.as_str(), ChessPieceColor::White);
         let client2 = Client::new(server_ip.as_str(), ChessPieceColor::Black);
@@ -359,7 +369,6 @@ impl MyGame {
                 let _ = self.client2.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
             }
         }
-
     }
 }
 

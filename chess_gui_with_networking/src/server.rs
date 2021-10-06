@@ -17,9 +17,14 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(listening_port: u16) -> Result<Self, String> {
-        let listening_port_ip = get_local_ip().unwrap() + ":" + listening_port.to_string().as_str();
-        //let listening_port_ip = "127.0.0.1:".to_string() + listening_port.to_string().as_str();
+    pub fn new(listening_port: u16, local: bool) -> Result<Self, String> {
+        let listening_port_ip: String;
+        if local {
+            listening_port_ip = "127.0.0.1:".to_string() + listening_port.to_string().as_str();
+        }
+        else {
+            listening_port_ip = get_local_ip().unwrap() + ":" + listening_port.to_string().as_str();
+        }
         let port_listener = TcpListener::bind(listening_port_ip.as_str());
         if port_listener.is_err() {
             return Err("Could not bind listening port: ".to_string() + listening_port_ip.as_str());
@@ -169,7 +174,23 @@ impl Server {
         if fen_notation.is_err() {
             panic!("Conversion to fen notation failed!");
         }
-        let send_msg = "board:".to_string() + fen_notation.unwrap().as_str() + ";";
+        let send_msg;
+        // Check if game is over
+        if self.chess_game.game_is_over() {
+            let winner = self.chess_game.get_winner();
+            if winner.is_none() {
+                send_msg = "end:-".to_string() + fen_notation.unwrap().as_str() + ";";
+            }
+            else if winner.unwrap() == ChessPieceColor::White {
+                send_msg = "end:w".to_string() + fen_notation.unwrap().as_str() + ";";
+            }
+            else {
+                send_msg = "end:b".to_string() + fen_notation.unwrap().as_str() + ";";
+            }
+        }
+        else {
+            send_msg = "board:".to_string() + fen_notation.unwrap().as_str() + ";";
+        }
         if self.white_player.is_some() {
             let _ = crate::networking::write_to_tcp_stream_string(self.white_player.as_mut().unwrap(), send_msg.as_str());
         }

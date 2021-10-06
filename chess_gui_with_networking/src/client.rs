@@ -45,14 +45,24 @@ impl Client {
             let result = result.unwrap();
             println!("Client: Recieved data from server!: '{}'", result);
 
+            #[derive(Debug, Clone, Copy, PartialEq)]
+            enum ReturnType {
+                Board,
+                End,
+            }
+
             // Parse the string
             'outer: for line in result.split(";") {
                 let mut num = 0;
+                let mut return_type: Option<ReturnType> = None;
                 for arg in line.split(":") {
                     match num {
                         0 => {
                             if arg == "board" {
-
+                                return_type = Some(ReturnType::Board);
+                            }
+                            else if arg == "end" {
+                                return_type = Some(ReturnType::End);
                             }
                             else {
                                 // if it is not board, it is not a valid input
@@ -60,17 +70,48 @@ impl Client {
                             }
                         }
                         1 => {
-                            println!("Client: setting board from fen notation!: '{}'", arg);
-                            // Interprit it as a fen string and update board
-                            //let result = chess_game.set_up_board_from_fen(arg);
-                            let mut new_game = Game::new();
-                            let result = new_game.set_up_board_from_fen(arg.to_string());
-                            if result.is_err() {
-                                println!("Client: Failed to set up board: {}", result.err().unwrap());
+                            if return_type == Some(ReturnType::Board) {
+                                println!("Client: setting board from fen notation!: '{}'", arg);
+                                // Interprit it as a fen string and update board
+                                //let result = chess_game.set_up_board_from_fen(arg);
+                                let mut new_game = Game::new();
+                                let result = new_game.set_up_board_from_fen(arg.to_string());
+                                if result.is_err() {
+                                    println!("Client: Failed to set up board: {}", result.err().unwrap());
+                                }
+                                else {
+                                    *chess_game = new_game;
+                                    println!("Client: Board setup succesfull!");
+                                }
                             }
-                            else {
-                                *chess_game = new_game;
-                                println!("Client: Board setup succesfull!");
+                            else if return_type == Some(ReturnType::End) {
+                                println!("Client: game is over!");
+                                let split_arg = arg.split_at(1);
+                                //println!("Client: split arg: '{}', '{}'", split_arg.0, split_arg.1);
+                                if split_arg.0 == "-" {
+                                    println!("Client: It is a Draw!");
+                                }
+                                else if split_arg.0 == "w" {
+                                    println!("Client: White wins!");
+                                }
+                                else if split_arg.0 == "b" {
+                                    println!("Client: Black wins!");
+                                }
+                                else {
+                                    println!("Client: error, cannot parse winner :(");
+                                    continue;
+                                }
+
+                                println!("Client: setting board from fen notation!: '{}'", arg);
+                                let mut new_game = Game::new();
+                                let result = new_game.set_up_board_from_fen(split_arg.1.to_string());
+                                if result.is_err() {
+                                    println!("Client: Failed to set up board: {}", result.err().unwrap());
+                                }
+                                else {
+                                    *chess_game = new_game;
+                                    println!("Client: Board setup succesfull!");
+                                }
                             }
                         }
                         _ => {
