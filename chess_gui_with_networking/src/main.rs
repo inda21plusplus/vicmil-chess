@@ -31,7 +31,7 @@ fn main() {
     my_game.game.set_up_board();
     
 
-    println!("game setup type: 'local', 'broadcast', 'host', 'join <IP_string>'");
+    println!("game setup type: 'local', 'broadcast', 'host', local_host, 'join <IP_string>'");
     let stdin = io::stdin();
     for line in stdin.lock().lines().map(|l| l.unwrap()) {
         let user_input: Vec<String> =
@@ -90,7 +90,7 @@ fn main() {
                     println!("server setup failed: {}", result.err().unwrap());
                 }
             },
-            _ => {}
+            _ => {println!("could not parse input");}
         }
     }
     

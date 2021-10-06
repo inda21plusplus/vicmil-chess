@@ -95,6 +95,20 @@ impl Server {
         let mut request_type: RequestType = RequestType::None;
         'outer: for line in input_string.split(";") {
             println!("Server: recieved request: '{}'", line);
+            if self.chess_game.game_is_over() {
+                let winner = self.chess_game.get_winner();
+                println!("Server: Game is already over!");
+                if winner.is_none() {
+                    println!("Server: It is a draw!");
+                }
+                else if winner.unwrap() == ChessPieceColor::White {
+                    println!("Server: White is winner!");
+                }
+                else {
+                    println!("Server: Black is winner!");
+                }
+                return;
+            }
             let mut num = 0;
             for arg in line.split(":") {
                 match num {
@@ -115,11 +129,15 @@ impl Server {
                                     // if it is not the right size, it is not a valid input
                                     continue 'outer;
                                 }
-                                // Make promotion char into uppercase
+                                // Make promotion char valid
                                 if arg.as_bytes()[4] == '-' as u8 {
+                                    // Set default to queen
+                                    let arg_split = arg.split_at(4);
+                                    arg = arg_split.0.to_string() + "Q";
                                 }
                                 else if (arg.as_bytes()[4] as char).is_alphabetic() {
-                                    let arg_split = arg.split_at(3);
+                                    // Make sure it is uppercase
+                                    let arg_split = arg.split_at(4);
                                     arg = arg_split.0.to_string() + arg_split.1.to_string().to_uppercase().as_str();
                                 }
 
