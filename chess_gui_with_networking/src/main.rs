@@ -353,10 +353,10 @@ impl MyGame {
         }
         else {
             // Send a request to server to move piece
-            let _ = self.client1.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Rook), &mut self.game);
+            let _ = self.client1.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
             if self.client2.is_some() {
                 // Try to move with the other client as well
-                let _ = self.client2.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Rook), &mut self.game);
+                let _ = self.client2.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
             }
         }
 
@@ -438,7 +438,7 @@ impl EventHandler<ggez::GameError> for MyGame {
         self.draw_chess_board(ctx)?;
 
         // See if it is your turn
-        let mut your_turn: bool;
+        let your_turn: bool;
         if self.client1.is_some() && self.client2.is_some() {
             your_turn = true;
         }
