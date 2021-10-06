@@ -69,10 +69,9 @@ fn main() {
                         println!("connection to server failed: {}", result.err().unwrap());
                     }
                 }
-                
             },
             "broadcast" => {
-                let result = my_game.stop_hosting();
+                let result = my_game.host_allow_spectators(1337);
                 if result.is_ok() {
                     println!("succesfully set up broadcast server");
                     break;
@@ -106,6 +105,7 @@ struct MyGame {
     black_square: graphics::Image,
     white_square: graphics::Image,
     red_square: graphics::Image,
+    wait_for_your_turn: graphics::Image,
     mouse_button_press_down: Option<ggez::mint::Point2<f32>>,
     game: chess_engine::chess_game::Game,
     client1: Option<Client>,
@@ -141,6 +141,7 @@ impl MyGame {
         let black_square = graphics::Image::new(ctx, "/black_square.png")?;
         let white_square = graphics::Image::new(ctx, "/white_square.png")?;
         let red_square = graphics::Image::new(ctx, "/red_square.png")?;
+        let wait_for_your_turn = graphics::Image::new(ctx, "/wait_for_your_turn.png")?;
 
         let game = chess_engine::chess_game::Game::new();
 
@@ -159,6 +160,7 @@ impl MyGame {
             white_king,
             black_square,
             white_square,
+            wait_for_your_turn,
             red_square,
             mouse_button_press_down: None,
             game,
@@ -174,8 +176,8 @@ impl MyGame {
     #[allow(dead_code)]
     pub fn host_server(&mut self, port: u16) -> Result<(), String> {
         self.server = Some(Server::new(port)?);
-        let server_ip = "127.0.0.1:".to_string() + port.to_string().as_str();
-        let client = Client::new(server_ip.as_str());
+        let server_ip: String = self.server.as_mut().unwrap().server_ip.clone();
+        let client = Client::new(server_ip.as_str(), ChessPieceColor::White);
         if client.is_err() {
             self.server = None;
             self.client1 = None;
@@ -188,7 +190,7 @@ impl MyGame {
 
     #[allow(dead_code)]
     pub fn connect_to_server(&mut self, server_ip: String) -> Result<(), String> {
-        let client = Client::new(server_ip.as_str());
+        let client = Client::new(server_ip.as_str(), ChessPieceColor::Black);
         if client.is_err() {
             self.server = None;
             self.client1 = None;
@@ -204,9 +206,9 @@ impl MyGame {
     #[allow(dead_code)]
     pub fn host_allow_spectators(&mut self, port: u16) -> Result<(), String> {
         self.server = Some(Server::new(port)?);
-        let server_ip = "127.0.0.1:".to_string() + port.to_string().as_str();
-        let client1 = Client::new(server_ip.as_str());
-        let client2 = Client::new(server_ip.as_str());
+        let server_ip = self.server.as_mut().unwrap().server_ip.clone();
+        let client1 = Client::new(server_ip.as_str(), ChessPieceColor::White);
+        let client2 = Client::new(server_ip.as_str(), ChessPieceColor::Black);
         if client1.is_err() || client2.is_err() {
             self.server = None;
             self.client1 = None;
@@ -351,10 +353,10 @@ impl MyGame {
         }
         else {
             // Send a request to server to move piece
-            let _ = self.client1.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
+            let _ = self.client1.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Rook), &mut self.game);
             if self.client2.is_some() {
                 // Try to move with the other client as well
-                let _ = self.client2.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Queen), &mut self.game);
+                let _ = self.client2.as_mut().unwrap().send_move_request(board_move, Some(ChessPieceId::Rook), &mut self.game);
             }
         }
 
@@ -433,9 +435,36 @@ impl EventHandler<ggez::GameError> for MyGame {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, Color::WHITE);
         // Draw code here...
-
-        //let board = self.game.get_board();
         self.draw_chess_board(ctx)?;
+
+        // See if it is your turn
+        let mut your_turn: bool;
+        if self.client1.is_some() && self.client2.is_some() {
+            your_turn = true;
+        }
+        else if self.client1.is_none() && self.client2.is_none() {
+            your_turn = true;
+        }
+        else if self.client1.is_some() && self.client1.as_mut().unwrap().player_color == self.game.turn {
+            your_turn = true;
+        }
+        else {
+            your_turn = false;
+        }
+        if !your_turn {
+            let image = &self.wait_for_your_turn;
+            let scale_factor = (SCREEN_WIDTH) / (image.dimensions().h*8.0);
+            let scale = glam::Vec2::new(scale_factor, scale_factor);
+            //let size = image.dimensions().h * scale.x;
+            let dst = glam::Vec2::new(SCREEN_WIDTH/2 as f32, SCREEN_WIDTH/2 as f32);
+            let offset = glam::Vec2::new(0.5, 0.5);
+            graphics::draw(ctx, image, graphics::DrawParam::new()
+            .dest(dst)
+            .offset(offset)
+            .scale(scale),)?;
+        }
+
+
         graphics::present(ctx)
     }
 }

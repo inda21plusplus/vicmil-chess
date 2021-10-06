@@ -270,7 +270,7 @@ pub mod fen_parser {
         let mut return_str = "".to_string();
         return_str += board_move.to_notation()?.as_str();
         if promote_piece.is_some() {
-            return_str += promote_piece.unwrap().to_letter().to_uppercase().to_string().as_str();
+            return_str += promote_piece.unwrap().to_letter().to_lowercase().to_string().as_str();
         }
         else {
             return_str += '-'.to_string().as_str();

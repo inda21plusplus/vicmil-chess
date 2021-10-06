@@ -13,10 +13,11 @@ enum ClientType {
 pub struct Client {
     _client_type: Option<ClientType>,
     server_connection: TcpStream,
+    pub player_color: ChessPieceColor,
 }
 
 impl Client {
-    pub fn new(server_ip: &str) -> Result<Self, String> {
+    pub fn new(server_ip: &str, player_color: ChessPieceColor) -> Result<Self, String> {
         let server_connection = Self::connect(server_ip);
         if server_connection.is_err() {
             return Err("Connection to server failed!".to_string());
@@ -24,6 +25,7 @@ impl Client {
         Ok(Self {
             _client_type: None,
             server_connection: server_connection.unwrap(),
+            player_color
         })
     }
     pub fn connect(server_ip: &str) -> Result<TcpStream, String> {
@@ -35,9 +37,6 @@ impl Client {
         stream.as_mut().unwrap().set_nonblocking(true).expect("set_nonblocking call failed");
         println!("Client: Succesfully connected to server!");
         return Ok(stream.unwrap());
-    }
-    fn send_draw_request_to_server(&mut self) {
-
     }
     pub fn read_from_server(&mut self, chess_game: &mut Game) {
         // Fetch server input

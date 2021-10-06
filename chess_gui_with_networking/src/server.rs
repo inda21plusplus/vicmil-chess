@@ -11,18 +11,18 @@ pub struct Server {
     white_player: Option<TcpStream>,
     spectators: LinkedList<TcpStream>,
     chess_game: chess_engine::chess_game::Game,
-    listening_port: u16,
+    pub listening_port: u16,
     port_listener: Option<Box<TcpListener>>,
-    server_ip: String,
+    pub server_ip: String,
 }
 
 impl Server {
     pub fn new(listening_port: u16) -> Result<Self, String> {
-        //let listening_port_ip = get_local_ip().unwrap() + listening_port.to_string().as_str();
-        let listening_port_ip = "127.0.0.1:".to_string() + listening_port.to_string().as_str();
+        let listening_port_ip = get_local_ip().unwrap() + ":" + listening_port.to_string().as_str();
+        //let listening_port_ip = "127.0.0.1:".to_string() + listening_port.to_string().as_str();
         let port_listener = TcpListener::bind(listening_port_ip.as_str());
         if port_listener.is_err() {
-            return Err("Could not bind listening port".to_string());
+            return Err("Could not bind listening port: ".to_string() + listening_port_ip.as_str());
         }
         //port_listener.as_mut().unwrap().set_nonblocking(true).expect("Cannot set non-blocking");
         //println!("server listening on ip: {}:{}", get_local_ip().unwrap(), listening_port);
@@ -89,6 +89,7 @@ impl Server {
         }
         let mut request_type: RequestType = RequestType::None;
         'outer: for line in input_string.split(";") {
+            println!("Server: recieved request: '{}'", line);
             let mut num = 0;
             for arg in line.split(":") {
                 match num {
@@ -104,6 +105,20 @@ impl Server {
                     1 => {
                         if request_type as usize == RequestType::Move as usize {
                             if Some(self.chess_game.turn) == client_color {
+                                let mut arg = arg.to_string();
+                                if arg.len() < 5 {
+                                    // if it is not the right size, it is not a valid input
+                                    continue 'outer;
+                                }
+                                // Make promotion char into uppercase
+                                if arg.as_bytes()[4] == '-' as u8 {
+                                }
+                                else if (arg.as_bytes()[4] as char).is_alphabetic() {
+                                    let arg_split = arg.split_at(3);
+                                    arg = arg_split.0.to_string() + arg_split.1.to_string().to_uppercase().as_str();
+                                }
+
+                                // Try performing move
                                 let result = self.chess_game.algebraic_notation_move(arg.to_string());
                                 if result.is_ok() {
                                     self.send_new_board_state();
