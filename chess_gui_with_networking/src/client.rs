@@ -1,7 +1,7 @@
 use std::net::{TcpStream};
 use chess_engine::chess_game::*;
 
-use crate::networking;
+use crate::{error_handling::chess_gui_error::{ChessGuiResult, ToChessGuiError}, networking};
 
 #[allow(dead_code)]
 enum ClientType {
@@ -17,10 +17,10 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(server_ip: &str, player_color: ChessPieceColor) -> Result<Self, String> {
+    pub fn new(server_ip: &str, player_color: ChessPieceColor) -> ChessGuiResult<Self> {
         let server_connection = Self::connect(server_ip);
         if server_connection.is_err() {
-            return Err("Connection to server failed!".to_string());
+            return Err("Connection to server failed!".to_chess_gui_error());
         }
         Ok(Self {
             _client_type: None,
@@ -28,11 +28,11 @@ impl Client {
             player_color
         })
     }
-    pub fn connect(server_ip: &str) -> Result<TcpStream, String> {
+    pub fn connect(server_ip: &str) -> ChessGuiResult<TcpStream> {
         // Connect to server, example 127.0.0.1:1337
         let mut stream = TcpStream::connect(server_ip);
         if stream.is_err() {
-            return Err("Connection failed".to_string());
+            return Err("Connection failed".to_chess_gui_error());
         }
         stream.as_mut().unwrap().set_nonblocking(true).expect("set_nonblocking call failed");
         println!("Client: Succesfully connected to server!");
@@ -126,7 +126,7 @@ impl Client {
         self.read_from_server(chess_game);
         //let _ = networking::write_to_tcp_stream_string(&mut self.server_connection, "hello world!");
     }
-    pub fn send_move_request(&mut self, board_move: BoardMove, promote_piece: Option<ChessPieceId>, chess_game: &mut Game) -> Result<(), String> {
+    pub fn send_move_request(&mut self, board_move: BoardMove, promote_piece: Option<ChessPieceId>, chess_game: &mut Game) -> ChessGuiResult<()> {
         println!("Client: sending move request!");
         // Send a request to server to move piece
         let move_notation: String;

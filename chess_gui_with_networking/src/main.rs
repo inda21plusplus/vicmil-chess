@@ -1,16 +1,18 @@
 use std::io::{self, BufRead};
 
-use ggez::{Context, ContextBuilder, GameError, GameResult};
+use ggez::{Context, ContextBuilder, GameResult};
 use ggez::graphics::{self, Color, Rect};
 use ggez::event::{self, EventHandler, MouseButton};
 use glam::*;
 use chess_engine::chess_game::*;
 use crate::server::*;
 use crate::client::*;
+use crate::error_handling::chess_gui_error::*;
 
 pub mod client;
 pub mod server;
 pub mod networking;
+pub mod error_handling;
 
 const SCREEN_WIDTH: f32 = 800.0;
 const SCREEN_HEIGHT: f32 = 800.0;
@@ -124,14 +126,14 @@ struct MyGame {
     server: Option<Server>,
 }
 
-pub fn get_square_from_mouse_pos(pos: ggez::mint::Point2<f32>) -> Result<ggez::mint::Point2<u8>, String> {
+pub fn get_square_from_mouse_pos(pos: ggez::mint::Point2<f32>) -> ChessGuiResult<ggez::mint::Point2<u8>> {
     if pos.x > 0.0 && pos.y > 0.0 && pos.x < SCREEN_WIDTH && pos.y < SCREEN_HEIGHT {
         return Ok(ggez::mint::Point2{
             x: ((pos.x*8.0) / SCREEN_WIDTH) as u8,
             y: ((pos.y*8.0) / SCREEN_HEIGHT) as u8,
         })
     }
-    return Err("Outside bounds".to_string());
+    return Err("Outside bounds".to_chess_gui_error());
 }
 
 pub fn set_white_piece_icon(ctx: &mut Context) -> GameResult<()> {
@@ -145,7 +147,7 @@ pub fn set_black_piece_icon(ctx: &mut Context) -> GameResult<()> {
 }
 
 impl MyGame {
-    pub fn new(ctx: &mut Context) -> GameResult<MyGame> {
+    pub fn new(ctx: &mut Context) -> ChessGuiResult<MyGame> {
         // Load/create resources such as images here.
         let black_rook = graphics::Image::new(ctx, "/Chess_rdt60.png")?;
         let white_rook = graphics::Image::new(ctx, "/Chess_rlt60.png")?;
@@ -195,7 +197,7 @@ impl MyGame {
 
 
     #[allow(dead_code)]
-    pub fn host_server(&mut self, port: u16, local: bool) -> Result<(), String> {
+    pub fn host_server(&mut self, port: u16, local: bool) -> ChessGuiResult<()> {
         self.server = Some(Server::new(port, local)?);
         let server_ip: String = self.server.as_mut().unwrap().server_ip.clone();
         let client = Client::new(server_ip.as_str(), ChessPieceColor::White);
@@ -210,13 +212,13 @@ impl MyGame {
     }
 
     #[allow(dead_code)]
-    pub fn connect_to_server(&mut self, server_ip: String) -> Result<(), String> {
+    pub fn connect_to_server(&mut self, server_ip: String) -> ChessGuiResult<()> {
         let client = Client::new(server_ip.as_str(), ChessPieceColor::Black);
         if client.is_err() {
             self.server = None;
             self.client1 = None;
             self.client2 = None;
-            return Err("Could not connect to server!".to_string());
+            return Err("Could not connect to server!".to_chess_gui_error());
         }
         self.server = None;
         self.client1 = Some(client.unwrap());
@@ -225,7 +227,7 @@ impl MyGame {
     }
 
     #[allow(dead_code)]
-    pub fn host_allow_spectators(&mut self, port: u16) -> Result<(), String> {
+    pub fn host_allow_spectators(&mut self, port: u16) -> ChessGuiResult<()> {
         self.server = Some(Server::new(port, false)?);
         let server_ip = self.server.as_mut().unwrap().server_ip.clone();
         let client1 = Client::new(server_ip.as_str(), ChessPieceColor::White);
@@ -267,7 +269,7 @@ impl MyGame {
         return image;
     }
 
-    pub fn draw_chess_board(&mut self, ctx: &mut Context) -> GameResult<()> {
+    pub fn draw_chess_board(&mut self, ctx: &mut Context) -> ChessGuiResult<()> {
         let mut grabbed_piece_pos: Option<ggez::mint::Point2<u8>> = None;
         let mut grabbed_piece: Option<ChessPiece> = None;
         if ggez::input::mouse::button_pressed(ctx, ggez::input::mouse::MouseButton::Left) 
@@ -388,7 +390,7 @@ pub fn get_mouse_position(ctx: &mut Context) -> ggez::mint::Point2<f32> {
 }
 
 
-pub fn draw_rectangle(ctx: &mut Context, rect: Rect, color: Color) -> GameResult<()> {
+pub fn draw_rectangle(ctx: &mut Context, rect: Rect, color: Color) -> ChessGuiResult<()> {
     // First we set the color to draw with, in this case all food will be
     // colored blue.
     //let color = [0.0, 0.0, 1.0, 1.0].into();
@@ -397,7 +399,8 @@ pub fn draw_rectangle(ctx: &mut Context, rect: Rect, color: Color) -> GameResult
     // since we implemented `From<GridPosition>` for `Rect` earlier.
     let rectangle =
         graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), rect, color)?;
-    graphics::draw(ctx, &rectangle, (ggez::mint::Point2 { x: 0.0, y: 0.0 },))
+    graphics::draw(ctx, &rectangle, (ggez::mint::Point2 { x: 0.0, y: 0.0 },))?;
+    return Ok(());
 }
 
 impl EventHandler<ggez::GameError> for MyGame {

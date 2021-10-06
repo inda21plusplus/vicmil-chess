@@ -1,5 +1,6 @@
 use chess_engine::chess_game::ChessPieceColor;
 
+use crate::error_handling::chess_gui_error::{ChessGuiResult, ToChessGuiError};
 use crate::networking::*;
 use std::net::{TcpListener, TcpStream};
 use std::collections::LinkedList;
@@ -17,7 +18,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(listening_port: u16, local: bool) -> Result<Self, String> {
+    pub fn new(listening_port: u16, local: bool) -> ChessGuiResult<Self> {
         let listening_port_ip: String;
         if local {
             listening_port_ip = "127.0.0.1:".to_string() + listening_port.to_string().as_str();
@@ -27,7 +28,7 @@ impl Server {
         }
         let port_listener = TcpListener::bind(listening_port_ip.as_str());
         if port_listener.is_err() {
-            return Err("Could not bind listening port: ".to_string() + listening_port_ip.as_str());
+            return Err(("Could not bind listening port: ".to_string() + listening_port_ip.as_str()).to_chess_gui_error());
         }
         //port_listener.as_mut().unwrap().set_nonblocking(true).expect("Cannot set non-blocking");
         //println!("server listening on ip: {}:{}", get_local_ip().unwrap(), listening_port);
@@ -60,7 +61,7 @@ impl Server {
         println!("Server: Add spectator");
         self.spectators.push_back(stream);
     }
-    pub fn accept_incomming_connections(&mut self) -> Result<(), String> {
+    pub fn accept_incomming_connections(&mut self) -> ChessGuiResult<()> {
         let mut port_listener = self.port_listener.take();
         let mut error: Option<String> = None;
         let _ = port_listener.as_mut().unwrap().set_nonblocking(true);
@@ -75,7 +76,7 @@ impl Server {
         }
         self.port_listener = port_listener;
         if error.is_some() {
-            return Err(error.unwrap());
+            return Err(error.unwrap().to_chess_gui_error());
         }
         return Ok(());
     }
@@ -219,5 +220,4 @@ impl Server {
             let _ = crate::networking::write_to_tcp_stream_string(spectator, send_msg.as_str());
         }
     }
-
 }

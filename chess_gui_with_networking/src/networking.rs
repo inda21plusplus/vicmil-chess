@@ -2,6 +2,8 @@ use std::io::Read;
 use std::io::Write;
 use std::net::{TcpStream};
 
+use crate::error_handling::chess_gui_error::*;
+
 
 #[allow(dead_code)]
 enum ClientType {
@@ -15,21 +17,21 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(server_ip: &str) -> Result<Self, String> {
+    pub fn new(server_ip: &str) -> ChessGuiResult<Self> {
         let server_connection = Self::connect(server_ip);
         if server_connection.is_err() {
-            return Err("Connection to server failed!".to_string());
+            return Err("Connection to server failed!".to_chess_gui_error());
         }
         Ok(Self {
             _client_type: None,
             server_connection: server_connection.unwrap(),
         })
     }
-    pub fn connect(server_ip: &str) -> Result<TcpStream, String> {
+    pub fn connect(server_ip: &str) -> ChessGuiResult<TcpStream> {
         // Connect to server, example 127.0.0.1:1337
         let mut stream = TcpStream::connect(server_ip);
         if stream.is_err() {
-            return Err("Connection failed".to_string());
+            return Err("Connection failed".to_chess_gui_error());
         }
         stream.as_mut().unwrap().set_nonblocking(true).expect("set_nonblocking call failed");
         println!("Client: Succesfully connected to server!");
@@ -62,55 +64,15 @@ impl Client {
     }
 }
 
-/*struct Game {
-    client: Option<Client>,
-    server: Option<Server>,
-}
-
-impl Game {
-    pub fn new() -> Self {
-        Self {
-            client: None,
-            server: None
-        }
-    }
-    // Update game state, both server and client
-    pub fn update(&mut self) {
-        if self.server.is_some() {
-            self.server.as_mut().unwrap().update();
-        }
-        if self.client.is_some() {
-            self.client.as_mut().unwrap().update();
-        }
-    }
-
-    pub fn host(&mut self) {
-        // Crate a server
-        self.server = Some(Server::new(4828).unwrap());
-
-        // Connect a client to the server
-        self.client = Some(Client::new("127.0.0.1:4828").unwrap());
-    }
-
-    #[allow(dead_code)]
-    pub fn connect(&mut self, server_ip: &str) {
-        // Set the server to none
-        self.server = None;
-
-        // Connect a client to an external server
-        self.client = Some(Client::new(server_ip).unwrap());
-    }
-}*/
-
-pub fn get_local_ip() -> Result<String, String> {
+pub fn get_local_ip() -> ChessGuiResult<String> {
     use local_ip_address::local_ip;
     let my_local_ip = local_ip();
     if my_local_ip.is_err() {
-        return Err("Could not fetch local ip".to_string());
+        return Err("Could not fetch local ip".to_chess_gui_error());
     }
     return Ok(my_local_ip.unwrap().to_string());
 }
-pub fn read_tcp_stream_bytes(stream: &mut TcpStream, max_read_size: usize) -> Result<Vec<u8>, String> {
+pub fn read_tcp_stream_bytes(stream: &mut TcpStream, max_read_size: usize) -> ChessGuiResult<Vec<u8>> {
     let mut buf = vec![];
     buf.resize(max_read_size, 0);
     //println!("read");
@@ -119,46 +81,35 @@ pub fn read_tcp_stream_bytes(stream: &mut TcpStream, max_read_size: usize) -> Re
         Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
             // wait until network socket is ready, typically implemented
             // via platform-specific APIs such as epoll or IOCP
-            return Err("socket not ready".to_string());
+            return Err("socket not ready".to_chess_gui_error());
         }
         Err(e) => panic!("encountered IO error: {}", e),
     };
     if buf.len() == 0 {
-        return Err("nothing to read".to_string());
+        return Err("nothing to read".to_chess_gui_error());
     }
     //println!("bytes: {:?}", buf);
     return Ok(buf);
 }
-pub fn read_tcp_stream_string(stream: &mut TcpStream, max_read_size: usize) -> Result<String, String> {
+pub fn read_tcp_stream_string(stream: &mut TcpStream, max_read_size: usize) -> ChessGuiResult<String> {
     let vec = read_tcp_stream_bytes(stream, max_read_size)?;
     let result = String::from_utf8(vec);
     if result.is_err() {
-        return Err("could not convert tcp read to string".to_string());
+        return Err("could not convert tcp read to string".to_chess_gui_error());
     }
     return Ok(result.unwrap());
 }
 
-pub fn write_to_tcp_stream_bytes(stream: &mut TcpStream, buf: &[u8]) -> Result<(), String> {
+pub fn write_to_tcp_stream_bytes(stream: &mut TcpStream, buf: &[u8]) -> ChessGuiResult<()> {
     let result = stream.write(&buf);
     if result.is_err() {
-        return Err("Write to tcpstream failed".to_string());
+        return Err("Write to tcpstream failed".to_chess_gui_error());
     }
     //println!("write");
     return Ok(());
 }
 
-pub fn write_to_tcp_stream_string(stream: &mut TcpStream, buf: &str) -> Result<(), String> {
+pub fn write_to_tcp_stream_string(stream: &mut TcpStream, buf: &str) -> ChessGuiResult<()> {
     let buf = buf.as_bytes();
     return write_to_tcp_stream_bytes(stream, buf);
 }
-
-/*fn main() {
-    println!("Creating game..");
-    let mut game = Game::new();
-    println!("Setting up game host..");
-    game.host();
-    println!("Running game..");
-    loop {
-        game.update();
-    }
-}*/
