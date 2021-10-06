@@ -1,6 +1,6 @@
 use std::io::{self, BufRead};
 
-use ggez::{Context, ContextBuilder, GameResult};
+use ggez::{Context, ContextBuilder, GameError, GameResult};
 use ggez::graphics::{self, Color, Rect};
 use ggez::event::{self, EventHandler, MouseButton};
 use glam::*;
@@ -24,13 +24,13 @@ fn main() {
 
         ggez::graphics::set_window_title(&ctx, "Chess Graphical Interface");
 
+    let _ = set_white_piece_icon(&mut ctx);
     // Create an instance of your event handler.
     // Usually, you should provide it with the Context object to
     // use when setting your game up.
     let mut my_game = MyGame::new(&mut ctx).unwrap();
     my_game.game.set_up_board();
     
-
     println!("game setup type: 'local', 'broadcast', 'host', local_host, 'join <IP_string>'");
     let stdin = io::stdin();
     for line in stdin.lock().lines().map(|l| l.unwrap()) {
@@ -73,6 +73,7 @@ fn main() {
                     let result = my_game.connect_to_server(server_ip);
                     if result.is_ok() {
                         println!("succesfully connected to server");
+                        let _ = set_black_piece_icon(&mut ctx);
                         break;
                     }
                     else {
@@ -131,6 +132,16 @@ pub fn get_square_from_mouse_pos(pos: ggez::mint::Point2<f32>) -> Result<ggez::m
         })
     }
     return Err("Outside bounds".to_string());
+}
+
+pub fn set_white_piece_icon(ctx: &mut Context) -> GameResult<()> {
+    ggez::graphics::set_window_icon(ctx, Some("/Chess_nlt60.png"))?;
+    return GameResult::Ok(());
+}
+
+pub fn set_black_piece_icon(ctx: &mut Context) -> GameResult<()> {
+    ggez::graphics::set_window_icon(ctx, Some("/Chess_ndt60.png"))?;
+    return GameResult::Ok(());
 }
 
 impl MyGame {
@@ -472,7 +483,6 @@ impl EventHandler<ggez::GameError> for MyGame {
             .offset(offset)
             .scale(scale),)?;
         }
-
 
         graphics::present(ctx)
     }
